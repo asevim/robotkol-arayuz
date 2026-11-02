@@ -437,11 +437,11 @@ async function detectMode() {
   }
   b.onclick = async () => {
     b.disabled = true; ctlMsg.textContent = "bağlanıyor…"; ctlMsg.style.color = "var(--dim)";
-    try { await usb.connect(true); ctlMsg.textContent = "Bağlandı. ▶ Başlat ile kurulumu yapın."; }
+    try { await usb.connect(true); ctlMsg.textContent = "Bağlandı. ▶ Başlat ile kurulumu yapın."; keepAwake(); }
     catch (e) { ctlMsg.textContent = "Bağlanamadı: " + (e.message || e); ctlMsg.style.color = "var(--bad)"; }
     b.disabled = false;
   };
-  try { if (await usb.connect(false)) ctlMsg.textContent = "Daha önce izin verilen karta bağlandı."; } catch (e) {}
+  try { if (await usb.connect(false)) { ctlMsg.textContent = "Daha önce izin verilen karta bağlandı."; keepAwake(); } } catch (e) {}
   if (navigator.serial && navigator.serial.addEventListener)
     navigator.serial.addEventListener("disconnect", () => usb.disconnect("kablo çıktı"));
   if (navigator.usb && navigator.usb.addEventListener) {
@@ -449,6 +449,18 @@ async function detectMode() {
     navigator.usb.addEventListener("connect", () => usb.connect(false).catch(() => {}));
   }
 }
+
+/* Tablet ekrani kararinca USB baglantisi kopabilir: bagliyken ekran acik kalsin */
+let wakeLock = null;
+async function keepAwake() {
+  try { if ("wakeLock" in navigator && !wakeLock) {
+    wakeLock = await navigator.wakeLock.request("screen");
+    wakeLock.addEventListener("release", () => { wakeLock = null; });
+  } } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && usb && usb.connected) keepAwake();
+});
 
 /* ======================= KONTROL ======================= */
 const ctlMsg = document.getElementById("ctlmsg");
