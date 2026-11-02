@@ -444,8 +444,11 @@ async function detectMode() {
     b.disabled = false;
   };
   try { if (await usb.connect(false)) { ctlMsg.textContent = "Daha önce izin verilen karta bağlandı."; keepAwake(); } } catch (e) {}
-  if (navigator.serial && navigator.serial.addEventListener)
+  if (navigator.serial && navigator.serial.addEventListener) {
     navigator.serial.addEventListener("disconnect", e => usb.onDeviceGone(e));
+    /* izin verilmis kart yeniden takilinca kendiliginden baglan */
+    navigator.serial.addEventListener("connect", () => usb.connect(false).catch(() => {}));
+  }
   if (navigator.usb && navigator.usb.addEventListener) {
     navigator.usb.addEventListener("disconnect", e => usb.onDeviceGone(e));
     navigator.usb.addEventListener("connect", () => usb.connect(false).catch(() => {}));
@@ -571,12 +574,14 @@ detectMode().then(poll);
 setInterval(poll, 200);
 
 /* Surum etiketi: tabletin hangi surumu calistirdigi gorunsun (yayinla.sh damgalar) */
-const SURUM = "02.11.2026 23:58";
+const SURUM = "03.11.2026 00:40";
 function showVersion() {
   const el = document.getElementById("surum");
   let t = "sürüm " + SURUM;
   if (window.UsbMon && UsbMon.SURUM !== SURUM) t += " · usbmon " + UsbMon.SURUM + " (uyuşmuyor — uygulamayı kapatıp açın)";
-  if (usb && usb.yama) t += " · USB yaması " + usb.yama;
+  const cv = (navigator.userAgent.match(/Chrome\/(\d+)/) || [])[1];
+  if (cv) t += " · Chrome " + cv;
+  if (usb && usb.yol) t += " · " + usb.yol;
   if (el.textContent !== t) el.textContent = t;
 }
 setInterval(showVersion, 1000); showVersion();

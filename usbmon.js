@@ -24,7 +24,7 @@ const ANSI = /\x1b\[[0-9;]*[A-Za-z]/g;
 const PERIOD = 250, POSE_PERIOD = 500, VOLT_PERIOD = 500;      /* ms */
 const PERIODIC = [[1, 0x6079, 0], [7, 0x6079, 0], [2, 0x2014, 2]];
 const T_WARN = 800, T_OVER = 1000, SUSTAIN = 1000, V_WARN = 20000;
-const SURUM = "02.11.2026 23:58";                                           /* yayinla.sh damgalar */
+const SURUM = "03.11.2026 00:40";                                           /* yayinla.sh damgalar */
 const ST_VID = 0x0483;                                          /* STMicroelectronics (ST-LINK) */
 const ACTIONS = {
   panel_kapat: ["panel off"],
@@ -85,22 +85,34 @@ class UsbMon {
   }
 
   async api() {
-    if (window.SAHTE_SERIAL) return window.SAHTE_SERIAL;              /* test: ?sahte=1 */
-    const android = /Android/i.test(navigator.userAgent);
-    if (navigator.serial && !android) return navigator.serial;
+    if (window.SAHTE_SERIAL) { this.yol = "sahte kart"; return window.SAHTE_SERIAL; }   /* test: ?sahte=1 */
+    /* Yerlesik Web Serial: masaustu Chrome 89+, Android Chrome 148+ (2026).
+     * Yoksa (eski Android Chrome) WebUSB uzerinden yamali kutuphane.
+     * Adrese ?webusb=1 eklenirse yerlesik olsa da kutuphane kullanilir. */
+    const forceUsb = /[?&]webusb=1/.test(location.search);
+    if (navigator.serial && !forceUsb) { this.yol = "yerleşik seri port"; return navigator.serial; }
     if (navigator.usb) {
       const mod = await import("./vendor/serial-polyfill.js");
       this.yama = mod.YEREL_YAMA || 0;
+      this.yol = "WebUSB kütüphanesi (yama " + this.yama + ")";
       return mod.serial;
     }
-    if (navigator.serial) return navigator.serial;
-    throw new Error("Bu tarayıcı USB seri bağlantıyı desteklemiyor (Chrome kullanın).");
+    throw new Error("Bu tarayıcı USB seri bağlantıyı desteklemiyor — Chrome'u güncelleyin.");
   }
 
   /* ask=true: cihaz secme penceresi (kullanici tiklamasi gerekir).
    * ask=false: daha once izin verilmis porta sessizce baglan. */
   async connect(ask) {
     if (this.connected) return true;
+    /* kart takilinca birden cok yer (usb/serial 'connect' olayi, 2 s deneme)
+     * ayni anda baglanmak isteyebilir: suren deneme varsa onu bekle */
+    if (this.connecting && !ask) return this.connecting;
+    const p = this.connectOnce(ask);
+    this.connecting = p;
+    try { return await p; } finally { if (this.connecting === p) this.connecting = null; }
+  }
+
+  async connectOnce(ask) {
     const api = await this.api();
     let port = null;
     if (ask) {
@@ -118,7 +130,7 @@ class UsbMon {
     this.writer = port.writable.getWriter();
     this.reader = port.readable.getReader();
     this.connected = true; this.connectedAt = Date.now();
-    this.event("[izleyici] baglandi (USB)");
+    this.event("[izleyici] baglandi (" + this.yol + ")");
     this.readLoop();
     this.mainLoop();
     return true;
