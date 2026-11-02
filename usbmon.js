@@ -24,7 +24,7 @@ const ANSI = /\x1b\[[0-9;]*[A-Za-z]/g;
 const PERIOD = 250, POSE_PERIOD = 500, VOLT_PERIOD = 500;      /* ms */
 const PERIODIC = [[1, 0x6079, 0], [7, 0x6079, 0], [2, 0x2014, 2]];
 const T_WARN = 800, T_OVER = 1000, SUSTAIN = 1000, V_WARN = 20000;
-const SURUM = "02.11.2026 23:53";                                           /* yayinla.sh damgalar */
+const SURUM = "02.11.2026 23:58";                                           /* yayinla.sh damgalar */
 const ST_VID = 0x0483;                                          /* STMicroelectronics (ST-LINK) */
 const ACTIONS = {
   panel_kapat: ["panel off"],
@@ -117,7 +117,7 @@ class UsbMon {
     if (this.retry) { clearInterval(this.retry); this.retry = null; }
     this.writer = port.writable.getWriter();
     this.reader = port.readable.getReader();
-    this.connected = true;
+    this.connected = true; this.connectedAt = Date.now();
     this.event("[izleyici] baglandi (USB)");
     this.readLoop();
     this.mainLoop();
@@ -137,7 +137,8 @@ class UsbMon {
     if (!this.connected && !this.port) return;
     this.connected = false;
     this.drops++;
-    this.lastErr = why || ""; this.retryErr = "";
+    const dur = this.connectedAt ? Math.round((Date.now() - this.connectedAt) / 1000) : 0;
+    this.lastErr = (why || "") + " [" + dur + " s bağlı kaldı]"; this.retryErr = "";
     this.panel = { on: null, mode: null, enable: null };
     try { await this.reader.cancel(); } catch (e) {}
     try { this.reader.releaseLock(); } catch (e) {}
@@ -152,6 +153,7 @@ class UsbMon {
         if (this.connected) { clearInterval(this.retry); this.retry = null; return; }
         try {
           if (await this.connect(false)) this.event("[izleyici] yeniden baglandi (" + this.drops + ". kopmadan sonra)");
+          else this.retryErr = "kart USB'de görünmüyor — tablet USB gücünü kesmiş olabilir; kabloyu çıkarıp takın";
         } catch (e) { this.retryErr = String(e.message || e); }
       }, 2000);
     }
