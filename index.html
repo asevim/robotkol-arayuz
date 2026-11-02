@@ -525,7 +525,8 @@ async function poll() {
   showCtl(d);
   if (MODE === "usb" && !d.connected && d.drops > 0) {
     ctlMsg.textContent = "Bağlantı koptu (" + d.drops + ". kez): " + (d.usb_err || "sebep bilinmiyor") +
-      (d.retrying ? " — yeniden bağlanmaya çalışılıyor…" : "");
+      (d.retrying ? " — yeniden bağlanmaya çalışılıyor…" : "") +
+      (d.retry_err ? " (son deneme: " + d.retry_err + ")" : "");
     ctlMsg.style.color = "var(--bad)";
   } else if (MODE === "usb" && d.connected && d.drops > 0 && ctlMsg.textContent.startsWith("Bağlantı koptu")) {
     ctlMsg.textContent = "Yeniden bağlandı (" + d.drops + " kopma oldu).";

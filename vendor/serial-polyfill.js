@@ -99,7 +99,12 @@ class UsbEndpointUnderlyingSource {
      * @param {ReadableByteStreamController} controller
      */
     pull(controller) {
-        (async () => {
+        /* YEREL YAMA (robot kol, 02.11.2026): promise'i dondur. Asli bunu
+         * dondurmuyordu; akis onceki okuma bitmeden yeniden pull() cagiriyor,
+         * her okumada bir transferIn daha birikiyordu (2 s'de binlerce).
+         * Android'de USB bellek siniri dolunca "A transfer error has occurred"
+         * ile baglanti kopuyordu. Simdi ayni anda tek transferIn bekler. */
+        return (async () => {
             var _a;
             let chunkSize;
             if (controller.desiredSize) {
@@ -241,6 +246,11 @@ export class SerialPort {
         this.serialOptions_ = options;
         this.validateOptions();
         try {
+            /* YEREL YAMA: onceki oturumdan acik kalmissa once kapat (eski
+             * bekleyen USB istekleri iptal olur), sonra temiz ac. */
+            if (this.device_.opened) {
+                await this.device_.close().catch(() => { });
+            }
             await this.device_.open();
             if (this.device_.configuration === null) {
                 await this.device_.selectConfiguration(1);
@@ -266,18 +276,24 @@ export class SerialPort {
      * closed.
      */
     async close() {
+        /* YEREL YAMA: hata sonrasi kapatmada adimlar hata verse de cihaz mutlaka
+         * kapansin (kapanmazsa bekleyen USB istekleri acik kalir, yeniden
+         * baglanmada kontrol istekleri de "transfer error" ile reddedilir). */
         const promises = [];
         if (this.readable_) {
-            promises.push(this.readable_.cancel());
+            promises.push(this.readable_.cancel().catch(() => { }));
         }
         if (this.writable_) {
-            promises.push(this.writable_.abort());
+            promises.push(this.writable_.abort().catch(() => { }));
         }
         await Promise.all(promises);
         this.readable_ = null;
         this.writable_ = null;
         if (this.device_.opened) {
-            await this.setSignals({ dataTerminalReady: false, requestToSend: false });
+            try {
+                await this.setSignals({ dataTerminalReady: false, requestToSend: false });
+            }
+            catch (e) { }
             await this.device_.close();
         }
     }

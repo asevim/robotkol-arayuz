@@ -65,7 +65,7 @@ class UsbMon {
     this.pending = [];          /* arayuz tuslarindan gelen komutlar */
     this.collecting = false; this.resp = ""; this.lineBuf = "";
     this.usbDev = null;         /* WebUSB cihazi (polyfill) - kopma olayini ayirt etmek icin */
-    this.lastErr = ""; this.drops = 0; this.retry = null; this.userClosed = false;
+    this.lastErr = ""; this.retryErr = ""; this.drops = 0; this.retry = null; this.userClosed = false;
     this.reset();
   }
 
@@ -132,7 +132,7 @@ class UsbMon {
     if (!this.connected && !this.port) return;
     this.connected = false;
     this.drops++;
-    this.lastErr = why || "";
+    this.lastErr = why || ""; this.retryErr = "";
     this.panel = { on: null, mode: null, enable: null };
     try { await this.reader.cancel(); } catch (e) {}
     try { this.reader.releaseLock(); } catch (e) {}
@@ -147,7 +147,7 @@ class UsbMon {
         if (this.connected) { clearInterval(this.retry); this.retry = null; return; }
         try {
           if (await this.connect(false)) this.event("[izleyici] yeniden baglandi (" + this.drops + ". kopmadan sonra)");
-        } catch (e) { this.lastErr = String(e.message || e); }
+        } catch (e) { this.retryErr = String(e.message || e); }
       }, 2000);
     }
   }
@@ -416,7 +416,7 @@ class UsbMon {
     return { t, age: this.t ? (Date.now() - this.t) / 1000 : null, samples: this.samples, loop: this.loop,
              joints, volt: this.volt, volt_min: this.voltMin, kin: this.kin,
              connected: this.connected, panel: this.panel, events: this.recent.slice(),
-             usb_err: this.lastErr, drops: this.drops, retrying: !!this.retry,
+             usb_err: this.lastErr, retry_err: this.retryErr, drops: this.drops, retrying: !!this.retry,
              mon_alive: true, error: this.connected ? undefined : "USB bağlı değil" };
   }
 
