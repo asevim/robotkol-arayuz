@@ -443,9 +443,9 @@ async function detectMode() {
   };
   try { if (await usb.connect(false)) { ctlMsg.textContent = "Daha önce izin verilen karta bağlandı."; keepAwake(); } } catch (e) {}
   if (navigator.serial && navigator.serial.addEventListener)
-    navigator.serial.addEventListener("disconnect", () => usb.disconnect("kablo çıktı"));
+    navigator.serial.addEventListener("disconnect", e => usb.onDeviceGone(e));
   if (navigator.usb && navigator.usb.addEventListener) {
-    navigator.usb.addEventListener("disconnect", () => usb.disconnect("kablo çıktı"));
+    navigator.usb.addEventListener("disconnect", e => usb.onDeviceGone(e));
     navigator.usb.addEventListener("connect", () => usb.connect(false).catch(() => {}));
   }
 }
@@ -523,6 +523,14 @@ async function poll() {
     catch (e) { connEl.textContent = "sunucu yok"; connEl.style.background = "#5a1d1d"; return; }
   }
   showCtl(d);
+  if (MODE === "usb" && !d.connected && d.drops > 0) {
+    ctlMsg.textContent = "Bağlantı koptu (" + d.drops + ". kez): " + (d.usb_err || "sebep bilinmiyor") +
+      (d.retrying ? " — yeniden bağlanmaya çalışılıyor…" : "");
+    ctlMsg.style.color = "var(--bad)";
+  } else if (MODE === "usb" && d.connected && d.drops > 0 && ctlMsg.textContent.startsWith("Bağlantı koptu")) {
+    ctlMsg.textContent = "Yeniden bağlandı (" + d.drops + " kopma oldu).";
+    ctlMsg.style.color = "var(--dim)";
+  }
   if (d.error || d.age === null || d.age > 2.5) {
     connEl.textContent = d.error ? (MODE === "usb" ? "USB bağlı değil" : "izleyici kapalı")
                        : (d.age === null ? "veri bekleniyor" : `veri gelmiyor (${d.age.toFixed(0)} s)`);

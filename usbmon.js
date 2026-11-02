@@ -64,6 +64,8 @@ class UsbMon {
     this.connected = false;
     this.pending = [];          /* arayuz tuslarindan gelen komutlar */
     this.collecting = false; this.resp = ""; this.lineBuf = "";
+    this.usbDev = null;         /* WebUSB cihazi (polyfill) - kopma olayini ayirt etmek icin */
+    this.lastErr = ""; this.drops = 0; this.retry = null; this.userClosed = false;
     this.reset();
   }
 
@@ -103,8 +105,11 @@ class UsbMon {
       port = ports.find(p => { try { return p.getInfo().usbVendorId === ST_VID; } catch (e) { return true; } }) || null;
       if (!port) return false;
     }
-    await port.open({ baudRate: 115200 });
+    await port.open({ baudRate: 115200, bufferSize: 4096 });
     this.port = port;
+    this.usbDev = port.device_ || null;
+    this.userClosed = false;
+    if (this.retry) { clearInterval(this.retry); this.retry = null; }
     this.writer = port.writable.getWriter();
     this.reader = port.readable.getReader();
     this.connected = true;
@@ -114,9 +119,20 @@ class UsbMon {
     return true;
   }
 
+  /* navigator.usb / navigator.serial 'disconnect' olayi: yalniz bizim kart */
+  onDeviceGone(evt) {
+    if (!this.connected) return;
+    if (evt && evt.device && this.usbDev && evt.device !== this.usbDev) return;   /* baska USB cihazi */
+    if (evt && evt.target && evt.target !== navigator.serial && evt.target !== this.port &&
+        !evt.device) return;
+    this.disconnect("kablo çıktı ya da kart yeniden başladı");
+  }
+
   async disconnect(why) {
     if (!this.connected && !this.port) return;
     this.connected = false;
+    this.drops++;
+    this.lastErr = why || "";
     this.panel = { on: null, mode: null, enable: null };
     try { await this.reader.cancel(); } catch (e) {}
     try { this.reader.releaseLock(); } catch (e) {}
@@ -125,6 +141,15 @@ class UsbMon {
     this.port = null;
     this.event("[izleyici] baglanti kesildi" + (why ? " (" + why + ")" : ""));
     this.spk.say("Seri bağlantı koptu", null, 20);
+    /* izin verilmis karta 2 s'de bir sessizce yeniden baglanmayi dene */
+    if (!this.userClosed && !this.retry) {
+      this.retry = setInterval(async () => {
+        if (this.connected) { clearInterval(this.retry); this.retry = null; return; }
+        try {
+          if (await this.connect(false)) this.event("[izleyici] yeniden baglandi (" + this.drops + ". kopmadan sonra)");
+        } catch (e) { this.lastErr = String(e.message || e); }
+      }, 2000);
+    }
   }
 
   /* ---------------------------------------------------------- okuma/yazma */
@@ -391,6 +416,7 @@ class UsbMon {
     return { t, age: this.t ? (Date.now() - this.t) / 1000 : null, samples: this.samples, loop: this.loop,
              joints, volt: this.volt, volt_min: this.voltMin, kin: this.kin,
              connected: this.connected, panel: this.panel, events: this.recent.slice(),
+             usb_err: this.lastErr, drops: this.drops, retrying: !!this.retry,
              mon_alive: true, error: this.connected ? undefined : "USB bağlı değil" };
   }
 

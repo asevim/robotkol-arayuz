@@ -110,10 +110,20 @@ class UsbEndpointUnderlyingSource {
                 chunkSize = this.endpoint_.packetSize;
             }
             try {
-                const result = await this.device_.transferIn(this.endpoint_.endpointNumber, chunkSize);
+                /* YEREL YAMA (robot kol, 02.11.2026): ST-LINK sifir uzunluklu paket
+                 * (ZLP) gonderebiliyor. 'bytes' akisina bos parca eklemek TypeError
+                 * verip akisi oldururdu (Android'de baglanti saniyeler icinde
+                 * kopuyordu). Bos paketi atla, yeniden oku. */
+                let result;
+                for (;;) {
+                    result = await this.device_.transferIn(this.endpoint_.endpointNumber, chunkSize);
+                    if (result.status != 'ok') break;
+                    if (result.data && result.data.byteLength > 0) break;
+                }
                 if (result.status != 'ok') {
                     controller.error(`USB error: ${result.status}`);
                     this.onError_();
+                    return;
                 }
                 if ((_a = result.data) === null || _a === void 0 ? void 0 : _a.buffer) {
                     const chunk = new Uint8Array(result.data.buffer, result.data.byteOffset, result.data.byteLength);
