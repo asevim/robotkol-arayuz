@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f1216">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<title>Robot Kol Canlı</title>
+<style>
+  :root {
+    --bg: #0f1216; --panel: #161b22; --line: #2a313b; --text: #e6e9ee; --dim: #8b95a3;
+    --ok: #2fbf71; --warn: #f2b134; --bad: #ef4b4b; --park: #5b8def; --fault: #d14bd6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  #app { display: grid; grid-template-columns: 1fr 430px; height: 100%; }
+  #view { position: relative; min-height: 320px; }
+  #view canvas { display: block; }
+  #hud { position: absolute; left: 12px; top: 10px; font-size: 12px; color: var(--dim); pointer-events: none; }
+  #hud b { color: var(--text); }
+  #axleg { position: absolute; left: 12px; bottom: 10px; font-size: 11px; line-height: 1.5; color: var(--dim);
+    background: #0f1216cc; border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; pointer-events: none; max-width: 420px; }
+  #axleg b { color: var(--text); font-weight: 600; }
+  #axleg .x { color: #ff6b6b; } #axleg .y { color: #5fd38a; } #axleg .z { color: #6ea8ff; }
+  #conn { position: absolute; right: 12px; top: 10px; padding: 3px 10px; border-radius: 12px;
+    font-size: 12px; font-weight: 600; background: #222; }
+  #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--dim); font-size: 14px; pointer-events: none; }
+  #side { border-left: 1px solid var(--line); background: var(--panel); overflow-y: auto; padding: 12px 14px; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .sub { color: var(--dim); font-size: 12px; margin-bottom: 10px; }
+  .j { display: grid; grid-template-columns: 34px 1fr 66px; gap: 4px 8px; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .jid { font-weight: 700; font-size: 15px; }
+  .jtype { color: var(--dim); font-size: 11px; }
+  .chip { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: #2a313b; white-space: nowrap; }
+  .meta { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .bar { position: relative; height: 10px; background: #0c0f13; border-radius: 5px; overflow: hidden; }
+  .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; }
+  .bar .m { position: absolute; top: 0; bottom: 0; width: 1px; background: #ffffff55; }
+  .tq { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .pk { text-align: right; color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; }
+  canvas.spark { width: 100%; height: 26px; }
+  .sec { margin-top: 14px; }
+  .sec h2 { font-size: 13px; margin: 0 0 6px; color: var(--dim); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .ev { font: 11px/1.45 ui-monospace, Menlo, monospace; color: var(--dim); white-space: pre-wrap; word-break: break-word; }
+  .cal { display: grid; grid-template-columns: 30px 1fr 70px 44px; gap: 4px 8px; align-items: center; font-size: 12px; }
+  .cal input[type=number] { width: 70px; background: #0c0f13; color: var(--text); border: 1px solid #3a4350; border-radius: 4px; padding: 2px 4px; }
+  .cal input[type=range] { width: 100%; }
+  button { background: #2a313b; color: var(--text); border: 1px solid #3a4350; border-radius: 6px;
+    padding: 6px 10px; font-size: 12px; cursor: pointer; }
+  button:hover { background: #343c48; }
+  button.on { background: #1d4d33; border-color: #2fbf71; }
+  .note { color: var(--dim); font-size: 11px; margin-top: 6px; }
+  .tcp { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px 10px; font-variant-numeric: tabular-nums; }
+  .tcp div { font-size: 12px; color: var(--dim); }
+  .tcp b { font-size: 15px; color: var(--text); }
+  .src { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: #2a313b; }
+  .ctl { margin: 4px 0 12px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #11161c; }
+  .ctl .st { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .ctl .st span { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #2a313b; color: var(--text); }
+  .ctl .st span.ok { background: #1d4d33; } .ctl .st span.warn { background: #5a4a1d; } .ctl .st span.bad { background: #5a1d1d; }
+  .ctl .bt { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ctl button.go { background: #1d4d33; border-color: #2fbf71; font-weight: 700; }
+  .ctl button.go:hover { background: #24603f; }
+  .ctl button:disabled { opacity: .5; cursor: default; }
+  #ctlmsg { color: var(--dim); font-size: 11px; margin-top: 6px; min-height: 15px; }
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--dim); margin-bottom: 4px; }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+    margin-right: 4px; vertical-align: -1px; background: var(--c); }
+  /* dokunmatik ekran (tablet): parmakla basilacak boyutlar */
+  @media (pointer: coarse) {
+    button { padding: 12px 16px; font-size: 15px; border-radius: 8px; }
+    .ctl .bt { gap: 8px; }
+    .ctl .st span { font-size: 13px; padding: 4px 10px; }
+    .cal input[type=range] { height: 28px; }
+    #axleg { font-size: 12px; }
+  }
+  @media (max-width: 900px) {
+    #app { grid-template-columns: 1fr; grid-template-rows: 55vh auto; }
+    #side { border-left: 0; border-top: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="view">
+    <div id="loading">3D model yükleniyor…</div>
+    <div id="hud"><span id="hudhelp">Fare: sol tuş döndür · sağ tuş kaydır · tekerlek yakınlaştır</span><br>
+      Döngü: <b id="loop">-</b> · Örnek: <b id="samp">-</b> · <span id="mode">canlı açı</span></div>
+    <div id="conn">bağlanıyor…</div>
+    <div id="axleg">
+      <b>Taban (masaya sabit):</b> <span class="x">X ileri</span> · <span class="y">Y konnektörün tersi</span> · <span class="z">Z yukarı</span><br>
+      <b>Gripper (uçta, onunla döner):</b> <span class="x">x</span> · <span class="y">y parmak açılma yönü</span> · <span class="z">z gripper ekseni</span><br>
+      <b>Kartezyen:</b> sol çubuk ileri-geri <span class="x">X</span>, sağ-sol <span class="y">Y</span>, burgu <span class="z">Z</span> ·
+      sağ çubuk gripper'ı <span class="x">x</span> / <span class="y">y</span> etrafında eğer, burgu <span class="z">z</span> etrafında döndürür
+    </div>
+  </div>
+  <div id="side">
+    <h1>Robot kol — canlı</h1>
+    <div class="sub">Eklem gövdeleri yüke göre renklenir. Tork binde: 1000 = nominal; çubuk ölçeği 2000, çizgiler 800 ve 1000.</div>
+    <div class="ctl">
+      <div class="st">
+        <span id="s-mon">izleyici -</span><span id="s-loop">döngü -</span><span id="s-panel">panel -</span>
+        <span id="s-drv">sürücüler -</span><span id="s-mode">mod -</span><span id="s-en">enable -</span>
+      </div>
+      <div class="bt">
+        <button id="b-usb" class="go" hidden title="Kartın USB'sine (ST-LINK) doğrudan bağlan">USB'ye bağlan</button>
+        <button id="b-start" class="go" title="İzleyici kapalıysa açar; config 0 → loop on → panel on">▶ Başlat</button>
+        <button id="b-panel" title="panel off: joystick komutları durur, enerji kesilmez">Paneli kapat</button>
+        <button id="b-brake" title="Tüm eksenler kapanır, frenler tutar">Fren (eksenleri kapat)</button>
+        <button id="b-reset" title="Arızaları temizler; enerji vermez">Arıza reset</button>
+      </div>
+      <div id="ctlmsg">Hiçbir tuş motorlara enerji vermez — eksenler paneldeki Enable anahtarıyla enerjilenir.</div>
+    </div>
+    <div class="legend">
+      <span style="--c:var(--ok)">rahat</span><span style="--c:var(--warn)">≥800</span>
+      <span style="--c:var(--bad)">≥1000</span><span style="--c:var(--park)">park (fren)</span>
+      <span style="--c:var(--fault)">arıza</span><span style="--c:#9aa3ad">enerjisiz</span>
+    </div>
+    <div id="joints"></div>
+    <div class="sec"><h2>Uç noktası (TCP) — taban çerçevesi</h2>
+      <div class="tcp">
+        <div>x <b id="tx">-</b> mm</div><div>y <b id="ty">-</b> mm</div><div>z <b id="tz">-</b> mm</div>
+        <div>roll <b id="trr">-</b>°</div><div>pitch <b id="trp">-</b>°</div><div>yaw <b id="try">-</b>°</div>
+      </div>
+      <div class="note" id="tcpnote">Kırmızı/yeşil/mavi oklar taban x/y/z. x = ileri, y = konnektörün tersi, z = yukarı; orijin taban altında J1 ekseni. TCP = parmak uçları.</div>
+    </div>
+    <div class="sec"><h2>Besleme</h2><div id="volt" class="meta">-</div></div>
+    <div class="sec"><h2>Model hizalama <span class="src" id="calsrc">-</span></h2>
+      <div class="cal" id="cal"></div>
+      <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap">
+        <button id="preview">Önizleme (kaydırıcılar)</button>
+        <button id="setzero">Şu anki poz = dik poz (sıfır)</button>
+        <button id="clearcal">Sıfırla</button>
+      </div>
+      <div class="note">Açılar model açısıdır: <b>0 = dik poz</b> (kol dimdik yukarı, üst kol konnektörün karşısında, bilek düz).
+        Firmware <code>pose</code> komutunu biliyorsa açılar ve kalibrasyon <b>firmware'den</b> gelir (<code>kcal</code>); aşağıdaki ref/ters yalnızca eski firmware için.
+        <b>ref</b> = kol dik pozdayken o eklemin encoder açısı; model = işaret × (açı − ref).
+        Önizlemede kaydırıcılar model açısını verir (başlangıç: STEP pozu).</div>
+    </div>
+    <div class="sec"><h2>Son olaylar</h2><div id="ev" class="ev">-</div></div>
+  </div>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script src="usbmon-sahte.js"></script>
+<script src="usbmon.js"></script>
+<script>
+/* ======================= KALIBRASYON ======================= */
+const CAL_KEY = "robotkol_kal_v3";     /* v3: ref = dik pozdaki encoder acisi */
+let cal = { zero: [0,0,0,0,0,0], sign: [1,1,1,1,1,1] };
+try { const s = JSON.parse(localStorage.getItem(CAL_KEY)); if (s && s.zero) cal = s; } catch (e) {}
+function saveCal() { try { localStorage.setItem(CAL_KEY, JSON.stringify(cal)); } catch (e) {} }
+let previewMode = false;
+const previewAng = [0, 0, 0, 0, 0, 0];
+let qcad = [0, 0, 0, 0, 0, 0];          /* STEP pozunun model acilari (kin.json) */
+let kinMeta = null;
+let fwKin = null;                        /* firmware 'pose' (mon.py -> state.kin) */
+let last = null;                         /* son /api/state */
+
+/* ======================= 3D SAHNE ======================= */
+const view = document.getElementById("view");
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0x0f1216);
+view.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, 1, 5, 20000);
+camera.up.set(0, 0, 1);
+camera.position.set(240, -1250, 520);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.target.set(230, -40, 170);
+controls.update();
+scene.add(new THREE.HemisphereLight(0xe8eeff, 0x1a1a1a, 0.7));
+const sun = new THREE.DirectionalLight(0xffffff, 0.75); sun.position.set(500, -800, 1400); scene.add(sun);
+const fill = new THREE.DirectionalLight(0xffffff, 0.3); fill.position.set(-600, 500, 300); scene.add(fill);
+const grid = new THREE.GridHelper(1600, 16, 0x3a4350, 0x232a33);
+grid.rotation.x = Math.PI / 2; grid.position.z = -38; scene.add(grid);
+
+/* CAD Y-yukari -> sahne Z-yukari */
+const root = new THREE.Group(); root.rotation.x = Math.PI / 2; scene.add(root);
+const links = [];          // links[k]: J_k ile donen parcalar (0 = sabit)
+const jointDef = {};       // id -> {p: Vector3, a: Vector3}
+const moduleMats = {};     // eklem id -> [{mat, base}]
+let gripMats = [];
+
+function resize() {
+  const w = view.clientWidth, h = view.clientHeight;
+  renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+window.addEventListener("resize", resize); resize();
+(function loop() { requestAnimationFrame(loop); controls.update(); renderer.render(scene, camera); })();
+
+async function loadModel() {
+  const meta = await (await fetch("model/arm.json")).json();
+  const buf = await (await fetch("model/arm.bin")).arrayBuffer();
+  const pos = new Float32Array(buf, 0, meta.vtotal * 3);
+  const idx = new Uint32Array(buf, meta.vtotal * 12, meta.itotal);
+  for (let k = 0; k <= 6; k++) {
+    const g = new THREE.Group(); g.matrixAutoUpdate = false;
+    (k === 0 ? root : links[k - 1]).add(g); links.push(g);
+  }
+  /* eksenler kin.json'dan: STEP pozunda, model isaretiyle (kin.py --cad) */
+  kinMeta = await (await fetch("model/kin.json")).json();
+  kinMeta.axes_cad.forEach((j, i) => {
+    jointDef[i + 1] = { p: new THREE.Vector3(...j.point), a: new THREE.Vector3(...j.axis).normalize() };
+  });
+  qcad = kinMeta.q_cad_deg.slice();
+  for (let i = 0; i < 6; i++) previewAng[i] = Math.round(qcad[i]);
+  drawCal();
+  let vo = 0, io = 0;
+  for (const part of meta.parts) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos.subarray(vo * 3, (vo + part.vcount) * 3), 3));
+    geo.setIndex(new THREE.BufferAttribute(idx.subarray(io, io + part.icount), 1));
+    geo.computeVertexNormals();
+    const base = new THREE.Color(part.color);
+    const mat = new THREE.MeshStandardMaterial({ color: base.clone(), metalness: 0.35, roughness: 0.5 });
+    const mesh = new THREE.Mesh(geo, mat);
+    links[part.link].add(mesh);
+    if (part.joint) (moduleMats[part.joint] = moduleMats[part.joint] || []).push({ mat, base });
+    if (part.link === 6 && !part.joint) gripMats.push({ mat, base });
+    vo += part.vcount; io += part.icount;
+  }
+  /* TCP isareti (kol 6'ya bagli, CAD koordinatinda) + taban eksenleri */
+  tcpMark = new THREE.Mesh(new THREE.SphereGeometry(7, 16, 12),
+    new THREE.MeshBasicMaterial({ color: 0xff3df2, depthTest: false }));
+  tcpMark.renderOrder = 2;
+  tcpMark.position.set(...kinMeta.tcp_cad); links[6].add(tcpMark);
+  const B = kinMeta.base_to_cad, R = B.R;
+  const bm = new THREE.Matrix4().set(R[0][0], R[0][1], R[0][2], B.org[0], R[1][0], R[1][1], R[1][2], B.org[1],
+                                     R[2][0], R[2][1], R[2][2], B.org[2], 0, 0, 0, 1);
+  const axes = new THREE.AxesHelper(180); axes.matrixAutoUpdate = false; axes.matrix.copy(bm);
+  axes.material.depthTest = false; axes.renderOrder = 2; root.add(axes);
+  /* eksen isimleri: taban cercevesinde, ok uclarinin biraz otesinde */
+  axes.add(axLabel("X ileri", "#ff6b6b", 215, 0, 0, 1));
+  axes.add(axLabel("Y", "#5fd38a", 0, 205, 0, 1));
+  axes.add(axLabel("Z yukarı", "#6ea8ff", 0, 0, 215, 1));
+  baseInv = bm.clone().invert();
+  const T = kinMeta.tcp_R_cad;
+  toolR0 = new THREE.Matrix4().set(T[0][0], T[0][1], T[0][2], 0, T[1][0], T[1][1], T[1][2], 0, T[2][0], T[2][1], T[2][2], 0, 0, 0, 0, 1);
+  /* gripper (arac) eksenleri: TCP'de, kol 6 ile doner - sag cubugun dondurdugu eksenler */
+  const tool = new THREE.AxesHelper(80); tool.matrixAutoUpdate = false;
+  tool.matrix.copy(toolR0).setPosition(...kinMeta.tcp_cad);
+  tool.material.depthTest = false; tool.renderOrder = 2; links[6].add(tool);
+  tool.add(axLabel("x", "#ff6b6b", 98, 0, 0, 0.6));
+  tool.add(axLabel("y", "#5fd38a", 0, 98, 0, 0.6));
+  tool.add(axLabel("z", "#6ea8ff", 0, 0, 98, 0.6));
+  document.getElementById("loading").style.display = "none";
+  applyAngles();
+}
+let tcpMark = null, baseInv = null, toolR0 = null;
+
+/* Ekrana donuk yazi etiketi (sprite). Boyut mm cinsinden, kamera uzakliginda sabit. */
+function axLabel(text, color, x, y, z, scale) {
+  const c = document.createElement("canvas"), g = c.getContext("2d");
+  const fs = 44;
+  g.font = "600 " + fs + "px -apple-system, Segoe UI, sans-serif";
+  const w = Math.ceil(g.measureText(text).width) + 24;
+  c.width = w; c.height = fs + 20;
+  g.font = "600 " + fs + "px -apple-system, Segoe UI, sans-serif";
+  g.fillStyle = "rgba(15,18,22,0.75)"; g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = color; g.textBaseline = "middle"; g.fillText(text, 12, c.height / 2 + 2);
+  const tex = new THREE.CanvasTexture(c);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+  const h = 30 * scale;
+  sp.scale.set(h * c.width / c.height, h, 1);
+  sp.position.set(x, y, z);
+  sp.renderOrder = 3;
+  return sp;
+}
+loadModel().catch(e => { document.getElementById("loading").textContent = "Model yüklenemedi: " + e; });
+
+/* eklem acilari (derece, model cercevesinde) -> grup matrisleri: T(p) R(a, t) T(-p) */
+const tmpA = new THREE.Matrix4(), tmpB = new THREE.Matrix4(), tmpC = new THREE.Matrix4();
+let liveAng = [0, 0, 0, 0, 0, 0];
+/* model acisi (derece, 0 = dik poz): onizleme > firmware > tarayici kalibrasyonu */
+function fwFresh() { return fwKin && last && (last.t - fwKin.t) < 3; }
+function modelAngle(i) {
+  if (previewMode) return previewAng[i];
+  if (fwFresh()) return fwKin.q[i];
+  return cal.sign[i] * (liveAng[i] - cal.zero[i]);
+}
+function applyAngles() {
+  if (links.length < 7 || !kinMeta) return;
+  for (let k = 1; k <= 6; k++) {
+    const J = jointDef[k]; if (!J) continue;
+    const deg = modelAngle(k - 1) - qcad[k - 1];     /* model STEP pozunda cizili */
+    tmpA.makeTranslation(J.p.x, J.p.y, J.p.z);
+    tmpB.makeRotationAxis(J.a, deg * Math.PI / 180);
+    tmpC.makeTranslation(-J.p.x, -J.p.y, -J.p.z);
+    links[k].matrix.copy(tmpA).multiply(tmpB).multiply(tmpC);
+    links[k].matrixWorldNeedsUpdate = true;
+  }
+  showTcp();
+}
+
+/* TCP: 3D modelden (cizilen pozla birebir) - taban cercevesinde konum + roll/pitch/yaw */
+const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _e = new THREE.Euler();
+function showTcp() {
+  if (!tcpMark || !baseInv) return;
+  /* kol 6'nin kok (CAD) cercevesine gore matrisi: zincirdeki matrislerin carpimi */
+  _m.identity();
+  for (let k = 1; k <= 6; k++) _m.multiply(links[k].matrix);
+  _p.copy(tcpMark.position).applyMatrix4(_m).applyMatrix4(baseInv);
+  const Rt = baseInv.clone().multiply(_m).multiply(toolR0);       /* arac eksenleri tabanda */
+  _e.setFromRotationMatrix(Rt, "ZYX");                             /* R = Rz(yaw) Ry(pitch) Rx(roll) */
+  const f = (id, v) => { document.getElementById(id).textContent = v.toFixed(1); };
+  f("tx", _p.x); f("ty", _p.y); f("tz", _p.z);
+  f("trr", _e.x * 180 / Math.PI); f("trp", _e.y * 180 / Math.PI); f("try", _e.z * 180 / Math.PI);
+  const note = document.getElementById("tcpnote");
+  if (fwFresh() && !previewMode) {
+    const t = fwKin.tcp, d = Math.hypot(t[0] - _p.x, t[1] - _p.y, t[2] - _p.z);
+    note.innerHTML = `Firmware: x ${t[0].toFixed(1)} y ${t[1].toFixed(1)} z ${t[2].toFixed(1)} mm · fark ${d.toFixed(1)} mm · ` +
+      `tekillik w ${fwKin.w.toFixed(3)}${fwKin.w < 0.004 ? " <b>(TEKİL)</b>" : ""} · kalibrasyon <b>${fwKin.valid ? "GEÇERLİ" : "DOĞRULANMADI"}</b>`;
+  }
+}
+
+/* ======================= RENKLER ======================= */
+const COL = { ok: 0x2fbf71, warn: 0xf2b134, bad: 0xef4b4b, park: 0x5b8def, fault: 0xd14bd6 };
+function tqClass(state, tq) {
+  if (state.startsWith("ARIZA")) return "fault";
+  if (state.startsWith("PARK")) return "park";
+  if (state !== "CALISIYOR" && !state.startsWith("enerji")) return "off";
+  const a = Math.abs(tq);
+  return a >= 1000 ? "bad" : a >= 800 ? "warn" : "ok";
+}
+const cssVar = { ok: "var(--ok)", warn: "var(--warn)", bad: "var(--bad)", park: "var(--park)", fault: "var(--fault)", off: "#9aa3ad" };
+/* tork -> renk: yesil (0) -> sari (800) -> kirmizi (>=1200) */
+const cG = new THREE.Color(COL.ok), cY = new THREE.Color(COL.warn), cR = new THREE.Color(COL.bad);
+function loadColor(tq) {
+  const a = Math.abs(tq);
+  if (a <= 800) return cG.clone().lerp(cY, a / 800);
+  return cY.clone().lerp(cR, Math.min(1, (a - 800) / 400));
+}
+function tint(list, k, tq) {
+  for (const m of list || []) {
+    if (k === "off") { m.mat.color.copy(m.base); m.mat.emissive.setHex(0); }
+    else if (k === "park") { m.mat.color.copy(m.base).lerp(new THREE.Color(COL.park), 0.55); m.mat.emissive.setHex(0); }
+    else if (k === "fault") { m.mat.color.setHex(COL.fault); m.mat.emissive.setHex(0x220022); }
+    else { m.mat.color.copy(m.base).lerp(loadColor(tq), 0.75); m.mat.emissive.setHex(k === "bad" ? 0x2a0000 : 0); }
+  }
+}
+
+/* ======================= YAN PANEL ======================= */
+const NAMES = ["taban", "omuz", "dirsek", "ön kol", "bilek", "bilek döner", "gripper"];
+const TYPES = ["döner", "büker", "büker", "döner", "büker", "döner", "CSV"];
+const jointsEl = document.getElementById("joints");
+const rows = {};
+for (let n = 1; n <= 7; n++) {
+  const d = document.createElement("div"); d.className = "j";
+  d.innerHTML = `<div><div class="jid">J${n}</div><div class="jtype">${TYPES[n-1]}</div></div>
+    <div><span class="chip">-</span> <span class="meta">${NAMES[n-1]} · <span class="ang">-</span>° · <span class="vel">-</span>°/s</span></div>
+    <div class="tq">-</div>
+    <div></div><div class="bar"><i></i><div class="m" style="left:40%"></div><div class="m" style="left:50%"></div></div>
+    <div class="pk">tepe -</div>
+    <div></div><canvas class="spark"></canvas><div></div>`;
+  jointsEl.appendChild(d);
+  rows[n] = { chip: d.querySelector(".chip"), ang: d.querySelector(".ang"), vel: d.querySelector(".vel"),
+    tq: d.querySelector(".tq"), bar: d.querySelector(".bar i"), pk: d.querySelector(".pk"),
+    spark: d.querySelector(".spark"), hist: [] };
+}
+
+const calEl = document.getElementById("cal");
+function drawCal() {
+  calEl.innerHTML = "";
+  const fw = fwFresh() && !previewMode;
+  document.getElementById("calsrc").textContent = previewMode ? "önizleme" : fw ? "firmware (kcal)" : "tarayıcı";
+  for (let i = 0; i < 6; i++) {
+    const lab = document.createElement("div"); lab.textContent = "J" + (i + 1);
+    const sl = document.createElement("input"); sl.type = "range"; sl.min = -180; sl.max = 180; sl.step = 1;
+    sl.value = previewAng[i]; sl.disabled = !previewMode; sl.title = "önizleme açısı";
+    sl.oninput = () => { previewAng[i] = +sl.value; applyAngles(); };
+    const z = document.createElement("input"); z.type = "number"; z.step = 1; z.value = cal.zero[i].toFixed(1); z.title = "ref (dik pozdaki encoder açısı)";
+    z.disabled = fw;
+    z.onchange = () => { cal.zero[i] = +z.value; saveCal(); applyAngles(); };
+    const sg = document.createElement("label");
+    sg.innerHTML = `<input type="checkbox" ${cal.sign[i] < 0 ? "checked" : ""}>ters`;
+    sg.querySelector("input").disabled = fw;
+    sg.querySelector("input").onchange = e => { cal.sign[i] = e.target.checked ? -1 : 1; saveCal(); applyAngles(); };
+    calEl.append(lab, sl, z, sg);
+  }
+}
+drawCal();
+document.getElementById("preview").onclick = e => {
+  previewMode = !previewMode; e.target.classList.toggle("on", previewMode);
+  document.getElementById("mode").textContent = previewMode ? "ÖNİZLEME (kaydırıcı)" : "canlı açı";
+  drawCal(); applyAngles();
+  if (previewMode) document.getElementById("tcpnote").textContent = "Önizleme: TCP kaydırıcı açılarından.";
+};
+document.getElementById("setzero").onclick = () => {
+  if (!last || !last.joints) return;
+  for (const j of last.joints) if (j.id <= 6) cal.zero[j.id - 1] = j.pos;
+  saveCal(); drawCal(); applyAngles();
+};
+document.getElementById("clearcal").onclick = () => {
+  cal = { zero: [0,0,0,0,0,0], sign: [1,1,1,1,1,1] }; saveCal(); drawCal(); applyAngles();
+};
+
+function spark(r) {
+  const c = r.spark, w = c.clientWidth, h = c.clientHeight;
+  if (!w) return;
+  if (c.width !== w * 2) { c.width = w * 2; c.height = h * 2; }
+  const g = c.getContext("2d"); g.setTransform(2, 0, 0, 2, 0, 0); g.clearRect(0, 0, w, h);
+  g.strokeStyle = "#ffffff22"; g.beginPath(); g.moveTo(0, h * 0.5); g.lineTo(w, h * 0.5); g.stroke();
+  g.strokeStyle = "#cfd6df"; g.lineWidth = 1.2; g.beginPath();
+  r.hist.forEach((v, i) => { const x = w * i / 149, y = h - Math.min(1, Math.abs(v) / 2000) * h; i ? g.lineTo(x, y) : g.moveTo(x, y); });
+  if (r.hist.length) g.stroke();
+}
+
+/* ======================= KAYNAK: sunucu ya da USB ======================= */
+/* Sunucu modu: Mac'teki server.py + mon.py (/api/state). USB modu: sayfa
+ * tek basina (tablet), usbmon.js karta dogrudan baglanir. */
+let MODE = null;                         /* "server" | "usb" */
+let usb = null;
+if (matchMedia("(pointer: coarse)").matches)
+  document.getElementById("hudhelp").textContent = "Dokunma: tek parmak döndür · iki parmak kaydır/yakınlaştır";
+async function detectMode() {
+  if (!/[?&]sahte=1/.test(location.search)) {
+    try {
+      const r = await fetch("api/state", { cache: "no-store" });
+      if (r.ok) { const j = await r.json(); if ("mon_alive" in j) { MODE = "server"; return; } }
+    } catch (e) {}
+  }
+  MODE = "usb";
+  usb = new UsbMon();
+  const b = document.getElementById("b-usb");
+  b.hidden = false;
+  if (!UsbMon.supported()) {
+    ctlMsg.textContent = window.isSecureContext ? "Bu tarayıcı USB bağlantıyı desteklemiyor — Chrome kullanın."
+                                               : "USB için sayfa https ya da localhost üzerinden açılmalı.";
+    ctlMsg.style.color = "var(--bad)"; b.disabled = true; return;
+  }
+  b.onclick = async () => {
+    b.disabled = true; ctlMsg.textContent = "bağlanıyor…"; ctlMsg.style.color = "var(--dim)";
+    try { await usb.connect(true); ctlMsg.textContent = "Bağlandı. ▶ Başlat ile kurulumu yapın."; }
+    catch (e) { ctlMsg.textContent = "Bağlanamadı: " + (e.message || e); ctlMsg.style.color = "var(--bad)"; }
+    b.disabled = false;
+  };
+  try { if (await usb.connect(false)) ctlMsg.textContent = "Daha önce izin verilen karta bağlandı."; } catch (e) {}
+  if (navigator.serial && navigator.serial.addEventListener)
+    navigator.serial.addEventListener("disconnect", () => usb.disconnect("kablo çıktı"));
+  if (navigator.usb && navigator.usb.addEventListener) {
+    navigator.usb.addEventListener("disconnect", () => usb.disconnect("kablo çıktı"));
+    navigator.usb.addEventListener("connect", () => usb.connect(false).catch(() => {}));
+  }
+}
+
+/* ======================= KONTROL ======================= */
+const ctlMsg = document.getElementById("ctlmsg");
+const ctlBtns = ["b-start", "b-panel", "b-brake", "b-reset"].map(id => document.getElementById(id));
+async function ctl(action) {
+  if (MODE === "usb") {
+    const j = usb.action(action);
+    ctlMsg.textContent = j.msg; ctlMsg.style.color = j.ok ? "var(--dim)" : "var(--bad)";
+    return;
+  }
+  ctlBtns.forEach(b => b.disabled = true);
+  ctlMsg.textContent = "gönderiliyor…";
+  try {
+    const r = await fetch("api/cmd", { method: "POST",
+      headers: { "Content-Type": "application/json", "X-Arayuz": "1" },
+      body: JSON.stringify({ action }) });
+    const j = await r.json();
+    ctlMsg.textContent = j.msg || (j.ok ? "tamam" : "hata");
+    ctlMsg.style.color = j.ok ? "var(--dim)" : "var(--bad)";
+  } catch (e) {
+    ctlMsg.textContent = "sunucuya ulaşılamadı"; ctlMsg.style.color = "var(--bad)";
+  }
+  setTimeout(() => ctlBtns.forEach(b => b.disabled = false), 1500);
+}
+document.getElementById("b-start").onclick = () => ctl("baslat");
+document.getElementById("b-panel").onclick = () => ctl("panel_kapat");
+document.getElementById("b-brake").onclick = () => ctl("fren");
+document.getElementById("b-reset").onclick = () => ctl("reset");
+function chip(id, text, cls) { const e = document.getElementById(id); e.textContent = text; e.className = cls || ""; }
+function showCtl(d) {
+  const alive = d.mon_alive, fresh = d.age !== null && d.age !== undefined && d.age < 3;
+  if (MODE === "usb" && !d.connected) chip("s-mon", "USB bağlı değil", "bad");
+  else if (MODE === "usb" && !fresh) chip("s-mon", "kart cevap vermiyor", "warn");
+  else if (!alive) chip("s-mon", "izleyici kapalı", "bad");
+  else if (!d.connected || !fresh) chip("s-mon", "kart bekleniyor", "warn");
+  else chip("s-mon", "kart bağlı", "ok");
+  const live = alive && d.connected && fresh;
+  chip("s-loop", "döngü " + (live ? (d.loop === "calisiyor" ? "çalışıyor" : "durdu") : "-"),
+       live ? (d.loop === "calisiyor" ? "ok" : "warn") : "");
+  const p = (live && d.panel) || {};
+  chip("s-panel", "panel " + (p.on === true ? "açık" : p.on === false ? "kapalı" : "-"),
+       p.on === true ? "ok" : p.on === false ? "warn" : "");
+  const js = (live && d.joints) || [];
+  const nf = js.filter(j => j.state.startsWith("ARIZA")).length;
+  const nc = js.filter(j => !j.state.startsWith("yapilandirilmadi")).length;
+  chip("s-drv", js.length ? (nf ? nf + " arıza" : nc + "/7 hazır") : "sürücüler -",
+       js.length ? (nf ? "bad" : nc === 7 ? "ok" : "warn") : "");
+  chip("s-mode", "mod " + (p.mode ? p.mode.toLowerCase() : "-"), p.mode === "KARTEZYEN" ? "warn" : "");
+  chip("s-en", "enable " + (p.enable || "-"), p.enable === "acik" ? "ok" : p.enable === "reddedildi" ? "bad" : "");
+}
+
+/* ======================= VERI ======================= */
+const connEl = document.getElementById("conn");
+async function poll() {
+  let d;
+  if (!MODE) return;
+  if (MODE === "usb") d = usb.state();
+  else {
+    try { d = await (await fetch("api/state", { cache: "no-store" })).json(); }
+    catch (e) { connEl.textContent = "sunucu yok"; connEl.style.background = "#5a1d1d"; return; }
+  }
+  showCtl(d);
+  if (d.error || d.age === null || d.age > 2.5) {
+    connEl.textContent = d.error ? (MODE === "usb" ? "USB bağlı değil" : "izleyici kapalı")
+                       : (d.age === null ? "veri bekleniyor" : `veri gelmiyor (${d.age.toFixed(0)} s)`);
+    connEl.style.background = "#5a1d1d";
+    if (d.error) return;
+  } else { connEl.textContent = "canlı"; connEl.style.background = "#1d4d33"; }
+  last = d;
+  const hadFw = fwFresh();
+  fwKin = d.kin || null;
+  if (hadFw !== fwFresh()) drawCal();
+  document.getElementById("mode").textContent = previewMode ? "ÖNİZLEME (kaydırıcı)" :
+    fwFresh() ? "açılar: firmware" : "açılar: tarayıcı kalibrasyonu";
+  document.getElementById("loop").textContent = d.loop;
+  document.getElementById("samp").textContent = d.samples;
+  for (const j of d.joints) {
+    const r = rows[j.id]; if (!r) continue;
+    const k = tqClass(j.state, j.tq);
+    r.chip.textContent = j.state; r.chip.style.background = cssVar[k]; r.chip.style.color = "#0b0d10";
+    r.ang.textContent = j.pos.toFixed(1); r.vel.textContent = j.vel.toFixed(1);
+    r.tq.textContent = j.tq; r.tq.style.color = cssVar[k];
+    r.bar.style.width = Math.min(100, Math.abs(j.tq) / 20) + "%"; r.bar.style.background = cssVar[k];
+    r.pk.textContent = "tepe " + j.peak;
+    r.hist.push(j.state === "CALISIYOR" ? j.tq : 0); if (r.hist.length > 150) r.hist.shift();
+    spark(r);
+    if (j.id <= 6) { liveAng[j.id - 1] = j.pos; tint(moduleMats[j.id], k, j.tq); }
+    else tint(gripMats, k === "ok" || k === "warn" || k === "bad" ? "off" : k, 0);
+  }
+  applyAngles();
+  const v = d.volt || {}, vm = d.volt_min || {};
+  document.getElementById("volt").innerHTML = Object.keys(v).map(n =>
+    `J${n}: <b>${(v[n] / 1000).toFixed(2)} V</b> (en düşük ${(vm[n] / 1000).toFixed(2)})`).join(" &nbsp; ") || "-";
+  document.getElementById("ev").textContent = (d.events || []).slice().reverse().join("\n") || "-";
+}
+detectMode().then(poll);
+setInterval(poll, 200);
+
+/* Uygulama olarak kurulum + internetsiz calisma (yalniz guvenli baglamda) */
+if ("serviceWorker" in navigator && window.isSecureContext && !/[?&]sahte=1/.test(location.search)) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>

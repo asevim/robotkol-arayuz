@@ -1,0 +1,704 @@
+{
+ "source": "model/arm_61.STEP",
+ "units": "mm",
+ "up": "Y",
+ "parts": [
+  {
+   "name": "base_61",
+   "path": "Shapes/arm_61/NAUO1/base_61",
+   "link": 0,
+   "joint": null,
+   "color": 13225183,
+   "vcount": 4991,
+   "icount": 23166
+  },
+  {
+   "name": "housing_tek_par\u00e7a_61",
+   "path": "Shapes/arm_61/NAUO2/joint_design_2_tek_housing_61/NAUO36/housing_tek_par\u00e7a_61",
+   "link": 1,
+   "joint": 1,
+   "color": 14672872,
+   "vcount": 3037,
+   "icount": 10872
+  },
+  {
+   "name": "rotor_holder_2_61",
+   "path": "Shapes/arm_61/NAUO2/joint_design_2_tek_housing_61/NAUO38/rotor_holder_2_61",
+   "link": 0,
+   "joint": 1,
+   "color": 14672872,
+   "vcount": 13762,
+   "icount": 58908
+  },
+  {
+   "name": "bonnet_61",
+   "path": "Shapes/arm_61/NAUO2/joint_design_2_tek_housing_61/NAUO40/bonnet_61",
+   "link": 1,
+   "joint": 1,
+   "color": 14672872,
+   "vcount": 12054,
+   "icount": 51216
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 0,
+   "joint": 1,
+   "color": 12107462,
+   "vcount": 238,
+   "icount": 984
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 0,
+   "joint": 1,
+   "color": 12107462,
+   "vcount": 234,
+   "icount": 918
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 0,
+   "joint": 1,
+   "color": 12107462,
+   "vcount": 2719,
+   "icount": 7704
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 0,
+   "joint": 1,
+   "color": 12107462,
+   "vcount": 233,
+   "icount": 912
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 0,
+   "joint": 1,
+   "color": 12107462,
+   "vcount": 238,
+   "icount": 984
+  },
+  {
+   "name": "housing_tek_par\u00e7a_61",
+   "path": "Shapes/arm_61/NAUO3/joint_design_2_tek_housing_61/NAUO36/housing_tek_par\u00e7a_61",
+   "link": 2,
+   "joint": 2,
+   "color": 14672872,
+   "vcount": 3038,
+   "icount": 10878
+  },
+  {
+   "name": "rotor_holder_2_61",
+   "path": "Shapes/arm_61/NAUO3/joint_design_2_tek_housing_61/NAUO38/rotor_holder_2_61",
+   "link": 1,
+   "joint": 2,
+   "color": 14672872,
+   "vcount": 13746,
+   "icount": 58812
+  },
+  {
+   "name": "bonnet_61",
+   "path": "Shapes/arm_61/NAUO3/joint_design_2_tek_housing_61/NAUO40/bonnet_61",
+   "link": 2,
+   "joint": 2,
+   "color": 14672872,
+   "vcount": 12055,
+   "icount": 51222
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 1,
+   "joint": 2,
+   "color": 12107462,
+   "vcount": 238,
+   "icount": 984
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 1,
+   "joint": 2,
+   "color": 12107462,
+   "vcount": 234,
+   "icount": 918
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 1,
+   "joint": 2,
+   "color": 12107462,
+   "vcount": 2720,
+   "icount": 7710
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 1,
+   "joint": 2,
+   "color": 12107462,
+   "vcount": 234,
+   "icount": 918
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 1,
+   "joint": 2,
+   "color": 12107462,
+   "vcount": 238,
+   "icount": 984
+  },
+  {
+   "name": "housing_tek_par\u00e7a_61",
+   "path": "Shapes/arm_61/NAUO4/joint_design_2_tek_housing_61/NAUO36/housing_tek_par\u00e7a_61",
+   "link": 2,
+   "joint": 3,
+   "color": 14672872,
+   "vcount": 3040,
+   "icount": 10890
+  },
+  {
+   "name": "rotor_holder_2_61",
+   "path": "Shapes/arm_61/NAUO4/joint_design_2_tek_housing_61/NAUO38/rotor_holder_2_61",
+   "link": 3,
+   "joint": 3,
+   "color": 14672872,
+   "vcount": 13772,
+   "icount": 58968
+  },
+  {
+   "name": "bonnet_61",
+   "path": "Shapes/arm_61/NAUO4/joint_design_2_tek_housing_61/NAUO40/bonnet_61",
+   "link": 2,
+   "joint": 3,
+   "color": 14672872,
+   "vcount": 12053,
+   "icount": 51210
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 2,
+   "joint": 3,
+   "color": 12107462,
+   "vcount": 238,
+   "icount": 984
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 2,
+   "joint": 3,
+   "color": 12107462,
+   "vcount": 235,
+   "icount": 924
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 2,
+   "joint": 3,
+   "color": 12107462,
+   "vcount": 2718,
+   "icount": 7698
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 2,
+   "joint": 3,
+   "color": 12107462,
+   "vcount": 234,
+   "icount": 918
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 2,
+   "joint": 3,
+   "color": 12107462,
+   "vcount": 238,
+   "icount": 984
+  },
+  {
+   "name": "housing_tek_par\u00e7a_61",
+   "path": "Shapes/arm_61/NAUO5/joint_design_2_tek_housing_61/NAUO36/housing_tek_par\u00e7a_61",
+   "link": 3,
+   "joint": 4,
+   "color": 14672872,
+   "vcount": 3038,
+   "icount": 10878
+  },
+  {
+   "name": "rotor_holder_2_61",
+   "path": "Shapes/arm_61/NAUO5/joint_design_2_tek_housing_61/NAUO38/rotor_holder_2_61",
+   "link": 4,
+   "joint": 4,
+   "color": 14672872,
+   "vcount": 13730,
+   "icount": 58716
+  },
+  {
+   "name": "bonnet_61",
+   "path": "Shapes/arm_61/NAUO5/joint_design_2_tek_housing_61/NAUO40/bonnet_61",
+   "link": 3,
+   "joint": 4,
+   "color": 14672872,
+   "vcount": 12054,
+   "icount": 51216
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 3,
+   "joint": 4,
+   "color": 12107462,
+   "vcount": 238,
+   "icount": 984
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 3,
+   "joint": 4,
+   "color": 12107462,
+   "vcount": 234,
+   "icount": 918
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 3,
+   "joint": 4,
+   "color": 12107462,
+   "vcount": 2719,
+   "icount": 7704
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 3,
+   "joint": 4,
+   "color": 12107462,
+   "vcount": 233,
+   "icount": 912
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 3,
+   "joint": 4,
+   "color": 12107462,
+   "vcount": 238,
+   "icount": 984
+  },
+  {
+   "name": "body_short_61",
+   "path": "Shapes/arm_61/NAUO6/body_short_61",
+   "link": 4,
+   "joint": null,
+   "color": 2830134,
+   "vcount": 17333,
+   "icount": 79614
+  },
+  {
+   "name": "plate_2",
+   "path": "Shapes/arm_61/NAUO7/end_effector_61/NAUO11/gripper_61/NAUO29/plate_2",
+   "link": 6,
+   "joint": null,
+   "color": 13949150,
+   "vcount": 14113,
+   "icount": 58146
+  },
+  {
+   "name": "claw_3",
+   "path": "Shapes/arm_61/NAUO7/end_effector_61/NAUO11/gripper_61/NAUO30/claw_3",
+   "link": 6,
+   "joint": null,
+   "color": 13949150,
+   "vcount": 1506,
+   "icount": 4728
+  },
+  {
+   "name": "claw_3",
+   "path": "Shapes/arm_61/NAUO7/end_effector_61/NAUO11/gripper_61/NAUO31/claw_3",
+   "link": 6,
+   "joint": null,
+   "color": 13949150,
+   "vcount": 1507,
+   "icount": 4734
+  },
+  {
+   "name": "f_transmitter",
+   "path": "Shapes/arm_61/NAUO7/end_effector_61/NAUO11/gripper_61/NAUO32/f_transmitter",
+   "link": 6,
+   "joint": null,
+   "color": 13949150,
+   "vcount": 334,
+   "icount": 972
+  },
+  {
+   "name": "f_transmitter",
+   "path": "Shapes/arm_61/NAUO7/end_effector_61/NAUO11/gripper_61/NAUO33/f_transmitter",
+   "link": 6,
+   "joint": null,
+   "color": 13949150,
+   "vcount": 334,
+   "icount": 972
+  },
+  {
+   "name": "f_transmitter",
+   "path": "Shapes/arm_61/NAUO7/end_effector_61/NAUO11/gripper_61/NAUO34/f_transmitter",
+   "link": 6,
+   "joint": null,
+   "color": 13949150,
+   "vcount": 334,
+   "icount": 972
+  },
+  {
+   "name": "f_transmitter",
+   "path": "Shapes/arm_61/NAUO7/end_effector_61/NAUO11/gripper_61/NAUO35/f_transmitter",
+   "link": 6,
+   "joint": null,
+   "color": 13949150,
+   "vcount": 334,
+   "icount": 972
+  },
+  {
+   "name": "effector_housing_2_2",
+   "path": "Shapes/arm_61/NAUO7/end_effector_61/NAUO12/mechanism/NAUO19/effector_housing_2_2",
+   "link": 6,
+   "joint": null,
+   "color": 13214282,
+   "vcount": 3091,
+   "icount": 11934
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 5,
+   "joint": 6,
+   "color": 12107462,
+   "vcount": 238,
+   "icount": 984
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 5,
+   "joint": 6,
+   "color": 12107462,
+   "vcount": 234,
+   "icount": 918
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 5,
+   "joint": 6,
+   "color": 12107462,
+   "vcount": 2719,
+   "icount": 7704
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 5,
+   "joint": 6,
+   "color": 12107462,
+   "vcount": 234,
+   "icount": 918
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 5,
+   "joint": 6,
+   "color": 12107462,
+   "vcount": 238,
+   "icount": 984
+  },
+  {
+   "name": "mechanism_kapak",
+   "path": "Shapes/arm_61/NAUO7/end_effector_61/NAUO13/mechanism_kapak",
+   "link": 6,
+   "joint": null,
+   "color": 13214282,
+   "vcount": 246,
+   "icount": 1068
+  },
+  {
+   "name": "mechanism_kapak",
+   "path": "Shapes/arm_61/NAUO7/end_effector_61/NAUO14/mechanism_kapak",
+   "link": 6,
+   "joint": null,
+   "color": 13214282,
+   "vcount": 246,
+   "icount": 1068
+  },
+  {
+   "name": "housing_tek_par\u00e7a_61",
+   "path": "Shapes/arm_61/NAUO7/end_effector_61/NAUO15/joint_design_2_tek_housing_61/NAUO36/housing_tek_par\u00e7a_61",
+   "link": 5,
+   "joint": 6,
+   "color": 14672872,
+   "vcount": 3039,
+   "icount": 10884
+  },
+  {
+   "name": "rotor_holder_2_61",
+   "path": "Shapes/arm_61/NAUO7/end_effector_61/NAUO15/joint_design_2_tek_housing_61/NAUO38/rotor_holder_2_61",
+   "link": 6,
+   "joint": 6,
+   "color": 14672872,
+   "vcount": 13750,
+   "icount": 58836
+  },
+  {
+   "name": "bonnet_61",
+   "path": "Shapes/arm_61/NAUO7/end_effector_61/NAUO15/joint_design_2_tek_housing_61/NAUO40/bonnet_61",
+   "link": 5,
+   "joint": 6,
+   "color": 14672872,
+   "vcount": 12054,
+   "icount": 51216
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 5,
+   "joint": 6,
+   "color": 12107462,
+   "vcount": 238,
+   "icount": 984
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 5,
+   "joint": 6,
+   "color": 12107462,
+   "vcount": 234,
+   "icount": 918
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 5,
+   "joint": 6,
+   "color": 12107462,
+   "vcount": 2722,
+   "icount": 7722
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 5,
+   "joint": 6,
+   "color": 12107462,
+   "vcount": 235,
+   "icount": 924
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 5,
+   "joint": 6,
+   "color": 12107462,
+   "vcount": 238,
+   "icount": 984
+  },
+  {
+   "name": "ara_p_2",
+   "path": "Shapes/arm_61/NAUO7/end_effector_61/NAUO16/ara_p_2",
+   "link": 6,
+   "joint": null,
+   "color": 14672872,
+   "vcount": 1448,
+   "icount": 5316
+  },
+  {
+   "name": "effector kapak_2",
+   "path": "Shapes/arm_61/NAUO7/end_effector_61/NAUO17/effector kapak_2",
+   "link": 6,
+   "joint": null,
+   "color": 13214282,
+   "vcount": 360,
+   "icount": 1344
+  },
+  {
+   "name": "housing_tek_par\u00e7a_61",
+   "path": "Shapes/arm_61/NAUO8/joint_design_2_tek_housing_61/NAUO36/housing_tek_par\u00e7a_61",
+   "link": 4,
+   "joint": 5,
+   "color": 14672872,
+   "vcount": 3038,
+   "icount": 10878
+  },
+  {
+   "name": "rotor_holder_2_61",
+   "path": "Shapes/arm_61/NAUO8/joint_design_2_tek_housing_61/NAUO38/rotor_holder_2_61",
+   "link": 5,
+   "joint": 5,
+   "color": 14672872,
+   "vcount": 13718,
+   "icount": 58644
+  },
+  {
+   "name": "bonnet_61",
+   "path": "Shapes/arm_61/NAUO8/joint_design_2_tek_housing_61/NAUO40/bonnet_61",
+   "link": 4,
+   "joint": 5,
+   "color": 14672872,
+   "vcount": 12052,
+   "icount": 51204
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 4,
+   "joint": 5,
+   "color": 12107462,
+   "vcount": 238,
+   "icount": 984
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 4,
+   "joint": 5,
+   "color": 12107462,
+   "vcount": 234,
+   "icount": 918
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 4,
+   "joint": 5,
+   "color": 12107462,
+   "vcount": 2718,
+   "icount": 7698
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 4,
+   "joint": 5,
+   "color": 12107462,
+   "vcount": 234,
+   "icount": 918
+  },
+  {
+   "name": "(adsiz)",
+   "path": "",
+   "link": 4,
+   "joint": 5,
+   "color": 12107462,
+   "vcount": 238,
+   "icount": 984
+  },
+  {
+   "name": "base_kapak",
+   "path": "Shapes/arm_61/NAUO9/base_kapak",
+   "link": 0,
+   "joint": null,
+   "color": 13225183,
+   "vcount": 10802,
+   "icount": 45492
+  },
+  {
+   "name": "body_long_2_61",
+   "path": "Shapes/arm_61/NAUO10/body_long_2_61",
+   "link": 2,
+   "joint": null,
+   "color": 2830134,
+   "vcount": 32664,
+   "icount": 149748
+  }
+ ],
+ "joints": {
+  "1": {
+   "point": [
+    -0.0,
+    12.0,
+    -0.0
+   ],
+   "axis": [
+    -0.0,
+    1.0,
+    -0.0
+   ]
+  },
+  "2": {
+   "point": [
+    25.25,
+    53.0,
+    -43.734
+   ],
+   "axis": [
+    0.5,
+    0.0,
+    -0.86603
+   ]
+  },
+  "3": {
+   "point": [
+    163.61,
+    169.958,
+    36.148
+   ],
+   "axis": [
+    0.5,
+    -0.0,
+    -0.86603
+   ]
+  },
+  "4": {
+   "point": [
+    167.011,
+    194.177,
+    96.424
+   ],
+   "axis": [
+    -0.69879,
+    -0.5907,
+    -0.40345
+   ]
+  },
+  "5": {
+   "point": [
+    265.076,
+    259.745,
+    105.699
+   ],
+   "axis": [
+    -0.5,
+    0.0,
+    0.86603
+   ]
+  },
+  "6": {
+   "point": [
+    318.976,
+    283.963,
+    78.506
+   ],
+   "axis": [
+    0.69879,
+    0.5907,
+    0.40345
+   ]
+  }
+ },
+ "vtotal": 288316,
+ "itotal": 1196262
+}
