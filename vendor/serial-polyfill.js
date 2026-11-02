@@ -514,4 +514,6 @@ class Serial {
 }
 /* an object to be used for starting the serial workflow */
 export const serial = new Serial();
+/* robot kol yerel yamalari: 1 = bos paket, 2 = tek bekleyen okuma + saglam kapatma */
+export const YEREL_YAMA = 2;
 //# sourceMappingURL=serial.js.map

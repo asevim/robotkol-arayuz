@@ -24,6 +24,7 @@ const ANSI = /\x1b\[[0-9;]*[A-Za-z]/g;
 const PERIOD = 250, POSE_PERIOD = 500, VOLT_PERIOD = 500;      /* ms */
 const PERIODIC = [[1, 0x6079, 0], [7, 0x6079, 0], [2, 0x2014, 2]];
 const T_WARN = 800, T_OVER = 1000, SUSTAIN = 1000, V_WARN = 20000;
+const SURUM = "02.11.2026 23:53";                                           /* yayinla.sh damgalar */
 const ST_VID = 0x0483;                                          /* STMicroelectronics (ST-LINK) */
 const ACTIONS = {
   panel_kapat: ["panel off"],
@@ -87,7 +88,11 @@ class UsbMon {
     if (window.SAHTE_SERIAL) return window.SAHTE_SERIAL;              /* test: ?sahte=1 */
     const android = /Android/i.test(navigator.userAgent);
     if (navigator.serial && !android) return navigator.serial;
-    if (navigator.usb) return (await import("./vendor/serial-polyfill.js")).serial;
+    if (navigator.usb) {
+      const mod = await import("./vendor/serial-polyfill.js");
+      this.yama = mod.YEREL_YAMA || 0;
+      return mod.serial;
+    }
     if (navigator.serial) return navigator.serial;
     throw new Error("Bu tarayıcı USB seri bağlantıyı desteklemiyor (Chrome kullanın).");
   }
@@ -437,5 +442,6 @@ class UsbMon {
   }
 }
 
+UsbMon.SURUM = SURUM;
 window.UsbMon = UsbMon;
 })();

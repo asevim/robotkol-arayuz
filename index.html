@@ -67,6 +67,7 @@
   .ctl button.go:hover { background: #24603f; }
   .ctl button:disabled { opacity: .5; cursor: default; }
   #ctlmsg { color: var(--dim); font-size: 11px; margin-top: 6px; min-height: 15px; }
+  #surum { color: var(--dim); font-size: 10px; margin-top: 4px; opacity: .7; }
   .legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--dim); margin-bottom: 4px; }
   .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px;
     margin-right: 4px; vertical-align: -1px; background: var(--c); }
@@ -114,6 +115,7 @@
         <button id="b-reset" title="Arızaları temizler; enerji vermez">Arıza reset</button>
       </div>
       <div id="ctlmsg">Hiçbir tuş motorlara enerji vermez — eksenler paneldeki Enable anahtarıyla enerjilenir.</div>
+      <div id="surum"></div>
     </div>
     <div class="legend">
       <span style="--c:var(--ok)">rahat</span><span style="--c:var(--warn)">≥800</span>
@@ -568,8 +570,27 @@ async function poll() {
 detectMode().then(poll);
 setInterval(poll, 200);
 
+/* Surum etiketi: tabletin hangi surumu calistirdigi gorunsun (yayinla.sh damgalar) */
+const SURUM = "02.11.2026 23:53";
+function showVersion() {
+  const el = document.getElementById("surum");
+  let t = "sürüm " + SURUM;
+  if (window.UsbMon && UsbMon.SURUM !== SURUM) t += " · usbmon " + UsbMon.SURUM + " (uyuşmuyor — uygulamayı kapatıp açın)";
+  if (usb && usb.yama) t += " · USB yaması " + usb.yama;
+  if (el.textContent !== t) el.textContent = t;
+}
+setInterval(showVersion, 1000); showVersion();
+
 /* Uygulama olarak kurulum + internetsiz calisma (yalniz guvenli baglamda) */
 if ("serviceWorker" in navigator && window.isSecureContext && !/[?&]sahte=1/.test(location.search)) {
+  /* Yeni surum indirilip devreye girince: USB bagli degilse sayfayi yenile,
+   * bagliysa (kol calisiyor olabilir) yalniz haber ver. */
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadController) return;                        /* ilk kurulum */
+    if (!usb || !usb.connected) location.reload();
+    else { ctlMsg.textContent = "Yeni sürüm indirildi — uygulamayı kapatıp açınca devreye girer."; ctlMsg.style.color = "var(--dim)"; }
+  });
   navigator.serviceWorker.register("sw.js").catch(() => {});
 }
 </script>
