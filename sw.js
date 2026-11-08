@@ -2,7 +2,7 @@
  * Ilk acilista butun dosyalar (3D model dahil, ~9 MB) onbellege alinir;
  * sonra sayfa internet ve sunucu olmadan da acilir. Cevrimiciyken html/js
  * guncel surumu once agdan dener (yeni surum yuklenince kendiliginden gelir). */
-const CACHE = "robotkol-20261108150827";
+const CACHE = "robotkol-20261108151344";
 const ASSETS = ["./", "index.html", "usbmon.js", "usbmon-sahte.js", "manifest.webmanifest",
   "icon-192.png", "icon-512.png", "vendor/three.min.js", "vendor/OrbitControls.js",
   "vendor/serial-polyfill.js", "model/arm.json", "model/arm.bin", "model/kin.json"];

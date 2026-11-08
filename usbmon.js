@@ -20,11 +20,18 @@ const GEN  = /Dugum\s+(\d+)\s+0x([0-9A-Fa-f]{4}):([0-9A-Fa-f]{2})\s*=\s*0x[0-9A-
 const POSE = /@POSE\s+(.*)$/;
 const EMCY = /\[EMCY\]\s*Dugum\s*(\d+)/;
 const ANSI = /\x1b\[[0-9;]*[A-Za-z]/g;
+/* 'joy' ekran satiri: "    RX  22589  1.137 V   -109  KABLO?" */
+const JOY = /\b(LX|LY|LZ|RX|RY|RZ)\s+(\d+)\s+([\d.]+) V\s+([+-]?\d+)[ \t]*(KABLO\?)?/g;
+const JOY_NAME = {     /* X = sag-sol, Y = ileri-geri, Z = burgu; eklem modunda surdugu eklem */
+  LX: "sol çubuk sağ-sol (J1)", LY: "sol çubuk ileri-geri (J2)", LZ: "sol çubuk burgu (J3)",
+  RX: "sağ çubuk sağ-sol (J4)", RY: "sağ çubuk ileri-geri (J5)", RZ: "sağ çubuk burgu (J6)" };
+const JOY_SAY = { LX: "sol çubuk sağ sol", LY: "sol çubuk ileri geri", LZ: "sol çubuk burgu",
+                  RX: "sağ çubuk sağ sol", RY: "sağ çubuk ileri geri", RZ: "sağ çubuk burgu" };
 
 const PERIOD = 250, POSE_PERIOD = 500, VOLT_PERIOD = 500;      /* ms */
 const PERIODIC = [[1, 0x6079, 0], [7, 0x6079, 0], [2, 0x2014, 2]];
 const T_WARN = 800, T_OVER = 1000, SUSTAIN = 1000, V_WARN = 20000;
-const SURUM = "08.11.2026 15:08";                                           /* yayinla.sh damgalar */
+const SURUM = "08.11.2026 15:13";                                           /* yayinla.sh damgalar */
 const ST_VID = 0x0483;                                          /* STMicroelectronics (ST-LINK) */
 const ACTIONS = {
   panel_kapat: ["panel off"],
@@ -78,6 +85,8 @@ class UsbMon {
     this.kin = null; this.poseOk = true; this.rebootedAt = 0;
     this.panel = { on: null, mode: null, enable: null };
     this.recent = [];
+    this.joyCheck = false;      /* Enable joystik yuzunden reddedildi: 'joy' ile hangisi oku */
+    this.enableBlock = null;    /* {t, text}: arayuzde gosterilen red sebebi */
   }
 
   static supported() {
@@ -246,6 +255,7 @@ class UsbMon {
           nextPoll = 0;
           continue;
         }
+        if (this.joyCheck) { this.joyCheck = false; await this.checkJoy(); continue; }
         if (now >= nextVolt) { await this.readVolt(); nextVolt = Date.now() + VOLT_PERIOD; continue; }
         if (this.poseOk && now >= nextPose) { await this.readPose(); nextPose = Date.now() + POSE_PERIOD; continue; }
         if (now >= nextPoll) {
@@ -260,6 +270,53 @@ class UsbMon {
     } catch (e) {
       if (this.connected) this.disconnect(String(e.message || e));
     }
+  }
+
+  /* Enable "joystickler notrde degil" diye reddedildi: 'joy' canli ekranini
+   * kisa sure oku (150 ms'de bir yenilenir), bir tusla cik, nötrde olmayan ya
+   * da kablo arizasi gosteren eksenleri arayuze ve sesli uyariya ver. */
+  async checkJoy() {
+    if (this.lineBuf) { this.handleLine(this.lineBuf); this.lineBuf = ""; }
+    this.resp = ""; this.collecting = true;
+    let r = "";
+    try {
+      await this.writeSlow("joy\r");
+      await sleep(600);
+      await this.writeSlow(" ");                       /* canli ekrandan cik */
+      const t0 = Date.now();
+      while (Date.now() - t0 < 1000 && this.connected && !this.resp.endsWith("> ")) await sleep(10);
+      await sleep(60);
+    } finally { this.collecting = false; r = this.resp; }
+    const last = {};
+    for (const m of r.replace(ANSI, "").matchAll(JOY)) last[m[1]] = { v: +m[3], n: +m[4], kablo: !!m[5] };
+    if (!Object.keys(last).length) {
+      this.setBlock("Enable reddedildi: joystickler nötrde değil (değerler okunamadı — çubukları bırakıp Enable'ı kapatıp açın).");
+      return;
+    }
+    const bad = Object.keys(JOY_NAME).filter(k => last[k] && (last[k].n !== 0 || last[k].kablo));
+    if (!bad.length) {
+      this.setBlock("Enable reddedildi ama şu an bütün çubuklar ortada — reddedildiği anda bir çubuk oynuyordu. " +
+                    "Çubuklara dokunmadan Enable'ı kapatıp açın.");
+      this.spk.say("Çubuklar şimdi ortada, Enable'ı kapatıp açın", null, 5);
+      return;
+    }
+    const parts = bad.map(k => {
+      const j = last[k];
+      const volt = j.v.toFixed(2).replace(".", ",") + " V; ortası ≈1,65 V";
+      return k + " — " + JOY_NAME[k] + (j.kablo ? ": KABLO ARIZASI olabilir (" + volt + ")"
+                                                : ": ortada değil (" + (j.n > 0 ? "+" : "") + j.n + ", " + volt + ")");
+    });
+    const cable = bad.some(k => last[k].kablo);
+    this.setBlock("Enable reddedildi: " + parts.join(" · ") + ". " +
+                  (cable ? "Kablo/konnektörü kontrol edin; çubuk ortada 0,5 s kalınca arıza kalkar. "
+                         : "Çubuğu oynatıp bırakın (burguysa çevirip bırakın). ") +
+                  "Sonra Enable'ı kapatıp açın.");
+    this.spk.say("Enable reddedildi. " + bad.map(k => JOY_SAY[k]).join(", ") + (cable ? " kablo arızası" : " ortada değil"), null, 5);
+  }
+
+  setBlock(text) {
+    this.enableBlock = { t: Date.now(), text };
+    this.event("[izleyici] " + text);
   }
 
   async readObj(n, idx, sub) {
@@ -329,7 +386,7 @@ class UsbMon {
     if (m) p.mode = m[1];
     else if (s.startsWith("[PANEL] KARTEZYEN mod")) p.mode = "KARTEZYEN";
     else if (s.startsWith("[PANEL] EKLEM modu")) p.mode = "EKLEM";
-    if (s.startsWith("[PANEL] Enable: eksenler enerjileniyor")) p.enable = "acik";
+    if (s.startsWith("[PANEL] Enable: eksenler enerjileniyor")) { p.enable = "acik"; this.enableBlock = null; }
     else if (s.startsWith("[PANEL] Enable kapandi")) p.enable = "kapali";
     else if (s.includes("ENABLE REDDEDILDI")) p.enable = "reddedildi";
     else if (s.includes("enable anahtari su an ACIK")) p.enable = "anahtar acik - kapatip acin";
@@ -377,8 +434,11 @@ class UsbMon {
     }
     if (s.startsWith("[SINIR]")) { const m = /Eklem (\d+)/.exec(s); const j = m ? m[1] : ""; say("Eklem " + j + " sınırda", "lim" + j, 4); return; }
     if (s.startsWith("[HAT]")) { say("CAN hattı hatası", null, 10); return; }
-    if (s.includes("ENABLE REDDEDILDI") && s.includes("notr")) { say("Enable reddedildi. Joystikleri bırakın, butonu kapatıp açın.", null, 5); return; }
-    if (s.includes("ENABLE REDDEDILDI")) { say("Enable reddedildi. E stop basılı.", null, 5); return; }
+    if (s.includes("ENABLE REDDEDILDI") && s.includes("notr")) { this.joyCheck = true; return; }   /* ses: checkJoy */
+    if (s.includes("ENABLE REDDEDILDI")) {
+      this.setBlock("Enable reddedildi: E-Stop basılı (ya da kablosu kopuk). E-Stop'u çevirip bırakın, sonra Enable'ı kapatıp açın.");
+      say("Enable reddedildi. E stop basılı.", null, 5); return;
+    }
     if (s.startsWith("[PANEL] KARTEZYEN mod: kalibrasyon")) { say("Kartezyen mod kalibre edilmedi, kol duruyor", null, 5); return; }
     if (s.startsWith("[PANEL] KARTEZYEN mod")) { say("Kartezyen mod", null, 3); return; }
     if (s.startsWith("[PANEL] EKLEM modu")) { say("Eklem modu", null, 3); return; }
@@ -435,6 +495,7 @@ class UsbMon {
     return { t, age: this.t ? (Date.now() - this.t) / 1000 : null, samples: this.samples, loop: this.loop,
              joints, volt: this.volt, volt_min: this.voltMin, kin: this.kin,
              connected: this.connected, panel: this.panel, events: this.recent.slice(),
+             enable_block: this.enableBlock,
              usb_err: this.lastErr, retry_err: this.retryErr, drops: this.drops, retrying: !!this.retry,
              mon_alive: true, error: this.connected ? undefined : "USB bağlı değil" };
   }

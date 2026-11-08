@@ -13,6 +13,24 @@ class FakePort {
   constructor() {
     this.line = ""; this.cfg = false; this.loop = false; this.panel = false; this.en = false;
     this.pos = [60, 40, -60, 30, 45, 120, -45]; this.t0 = Date.now();
+    /* joystik ham degerleri; test icin degistirilebilir: SAHTE_SERIAL.port.joy.RX = [22589, -109, false] */
+    this.joy = { LX: [32833, 0, false], LY: [33143, 0, false], LZ: [30374, 0, false],
+                 RX: [32870, 0, false], RY: [32870, 0, false], RZ: [31780, 0, false] };
+    this.liveTimer = null;
+  }
+  joyLines() {
+    return Object.entries(this.joy).map(([k, [raw, n, f]]) => {
+      const mv = Math.floor(raw * 3300 / 65535);
+      return "\r\x1b[K    " + k + "  " + String(raw).padStart(5) + "  " + Math.floor(mv / 1000) + "." +
+             String(mv % 1000).padStart(3, "0") + " V  " + ((n >= 0 ? "+" : "") + n).padStart(5) + "  " + (f ? "KABLO?" : "") + "\r\n";
+    }).join("");
+  }
+  /* Enable anahtari kenari: firmware gibi notr/E-Stop denetimi */
+  enableEdge() {
+    const bad = Object.values(this.joy).some(([, n, f]) => n !== 0 || f);
+    this.emit(bad ? "\r\n[PANEL] ENABLE REDDEDILDI: joystickler notrde degil.\r\n        Kollari birakin, anahtari kapatip tekrar acin.\r\n> "
+                  : "\r\n[PANEL] Enable: eksenler enerjileniyor.\r\n> ");
+    if (!bad) this.en = true;
   }
   getInfo() { return { usbVendorId: 0x0483, usbProductId: 0x374e }; }
   async open() {
@@ -26,11 +44,14 @@ class FakePort {
   onBytes(chunk) {
     for (const b of chunk) {
       const ch = String.fromCharCode(b);
+      if (this.liveTimer) {                         /* canli ekran: herhangi bir tus cikar */
+        clearInterval(this.liveTimer); this.liveTimer = null; this.emit("> "); continue;
+      }
       if (ch === "\x03") { this.line = ""; this.emit("^C\r\n> "); continue; }
       if (ch === "\r") {
         this.emit("\r\n");
         const l = this.line.trim(); this.line = "";
-        setTimeout(() => { this.exec(l); this.emit("> "); }, 8);
+        setTimeout(() => { if (this.exec(l) !== "canli") this.emit("> "); }, 8);
       } else { this.line += ch; this.emit(ch); }
     }
   }
@@ -48,6 +69,13 @@ class FakePort {
     const a = l.split(/\s+/);
     this.tick();
     if (l === "") return;
+    if (a[0] === "joy") {
+      out("Canli joystick - cikmak icin bir tus. Norm: -1000..+1000 (ol bolge 100)");
+      out("  Eksen  Ham    Gerilim   Norm");
+      this.emit(this.joyLines());
+      this.liveTimer = setInterval(() => this.emit("\x1b[6A" + this.joyLines()), 150);
+      return "canli";
+    }
     if (a[0] === "ax") {
       out("Dongu: " + (this.loop ? "calisiyor" : "DURDU") + ", 1234 cevrim   heartbeat: acik");
       out(" ID Mod  Durum                Pozisyon        Hiz   Tork  SW      CiA402");
@@ -86,7 +114,7 @@ class FakePort {
       out("PANEL KONTROLU ACIK - 7/7 eksen yapilandirilmis.");
       out("Enable anahtarini KAPATIP ACIN (joystickler notrde olmali).");
       out("Mod anahtari: EKLEM");
-      setTimeout(() => { this.en = true; this.emit("\r\n[PANEL] Enable: eksenler enerjileniyor.\r\n> "); }, 2500);
+      setTimeout(() => this.enableEdge(), 2500);
       return;
     }
     if (l === "panel off") { this.panel = false; out("Panel kontrolu kapali, hedef hizlar sifir. (Enerji kesilmedi.)"); return; }
@@ -98,6 +126,7 @@ class FakePort {
 
 const port = new FakePort();
 window.SAHTE_SERIAL = {
+  port,
   async requestPort() { return port; },
   async getPorts() { return []; },
 };
