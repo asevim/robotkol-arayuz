@@ -24,7 +24,7 @@ const ANSI = /\x1b\[[0-9;]*[A-Za-z]/g;
 const PERIOD = 250, POSE_PERIOD = 500, VOLT_PERIOD = 500;      /* ms */
 const PERIODIC = [[1, 0x6079, 0], [7, 0x6079, 0], [2, 0x2014, 2]];
 const T_WARN = 800, T_OVER = 1000, SUSTAIN = 1000, V_WARN = 20000;
-const SURUM = "03.11.2026 00:40";                                           /* yayinla.sh damgalar */
+const SURUM = "08.11.2026 15:08";                                           /* yayinla.sh damgalar */
 const ST_VID = 0x0483;                                          /* STMicroelectronics (ST-LINK) */
 const ACTIONS = {
   panel_kapat: ["panel off"],
@@ -439,12 +439,27 @@ class UsbMon {
              mon_alive: true, error: this.connected ? undefined : "USB bağlı değil" };
   }
 
+  /* Baslat komutlari (server.py start_cmds ile ayni kural). Dongu calisiyor
+   * diye kurulum atlanmasin: sürücüler gucsuzken 'config 0' basarisiz olduysa
+   * eksenler yapilandirilmamis kalir, Enable hicbir seyi enerjilendirmez. */
+  startCmds() {
+    const st = [1, 2, 3, 4, 5, 6, 7].map(n => (this.latest[n] || ["?"])[0]);
+    const unconf = st.some(s => s === "?" || /yapilandirilmadi/.test(s));
+    const live = st.some(s => /CALISIYOR|PARK|enerjileniyor|kapatiliyor/.test(s));
+    if (this.loop !== "calisiyor") return { cmds: ["config 0", "loop on", "panel on"] };
+    if (!unconf) return { cmds: ["panel on"] };
+    if (live) return { err: "Bazı eksenler yapılandırılmamış, diğerleri enerjili — önce Fren (eksenleri kapat), sonra ▶ Başlat." };
+    return { cmds: ["loop off", "config 0", "loop on", "panel on"] };   /* hepsi enerjisiz: guvenli */
+  }
+
   /* Kontrol tusu -> {ok, msg}. server.py do_action ile ayni kurallar. */
   action(a) {
     if (!this.connected) return { ok: false, msg: "USB bağlı değil - önce 'USB'ye bağlan'." };
     let cmds;
     if (a === "baslat") {
-      cmds = this.loop === "calisiyor" ? ["panel on"] : ["config 0", "loop on", "panel on"];
+      const r = this.startCmds();
+      if (r.err) return { ok: false, msg: r.err };
+      cmds = r.cmds;
     } else if (ACTIONS[a]) {
       cmds = ACTIONS[a];
     } else {
