@@ -31,7 +31,7 @@ const JOY_SAY = { LX: "sol çubuk sağ sol", LY: "sol çubuk ileri geri", LZ: "s
 const PERIOD = 250, POSE_PERIOD = 500, VOLT_PERIOD = 500;      /* ms */
 const PERIODIC = [[1, 0x6079, 0], [7, 0x6079, 0], [2, 0x2014, 2]];
 const T_WARN = 800, T_OVER = 1000, SUSTAIN = 1000, V_WARN = 20000;
-const SURUM = "08.11.2026 15:13";                                           /* yayinla.sh damgalar */
+const SURUM = "08.11.2026 15:54";                                           /* yayinla.sh damgalar */
 const ST_VID = 0x0483;                                          /* STMicroelectronics (ST-LINK) */
 const ACTIONS = {
   panel_kapat: ["panel off"],
@@ -315,6 +315,7 @@ class UsbMon {
   }
 
   setBlock(text) {
+    if (this.enableBlock && this.enableBlock.text === text && Date.now() - this.enableBlock.t < 5000) return;
     this.enableBlock = { t: Date.now(), text };
     this.event("[izleyici] " + text);
   }
@@ -415,6 +416,15 @@ class UsbMon {
       return;
     }
     if (s.startsWith("ID Mod")) return;
+    m = /(\d+) cerceve dustu/.exec(s);                  /* her 'ax'ta tekrarlanir: yalniz artista yaz */
+    if (m) {
+      const n = +m[1];
+      if (this.dropSeen !== undefined && n > this.dropSeen)
+        this.event("[izleyici] HAT DOLU: " + (n - this.dropSeen) + " kontrol cercevesi dustu (toplam " + n + ")");
+      else if (this.dropSeen === undefined) this.event(s);
+      this.dropSeen = n;
+      return;
+    }
     m = ROW.exec(line);
     if (m) {
       this.rows[+m[1]] = [m[3].trim(), +m[4], +m[5], +m[6], m[7]];
@@ -427,6 +437,16 @@ class UsbMon {
 
   alert(s) {
     const say = (t, k, e) => this.spk.say(t, k, e);
+    if (/\[EMCY\].*0x3220/.test(s)) {                    /* DC bara dusuk gerilim */
+      this.setBlock("Sürücülerin besleme gerilimi düştü (0x3220) — sürücüler kapanıp yeniden açılır, ayarları silinir. " +
+                    "Güç kaynağını ve besleme kablolarını kontrol edin. Sonra ▶ Başlat (yeniden kurar) ve Enable'ı kapatıp açın.");
+      say("Sürücü beslemesi düştü", "uv", 10); return;
+    }
+    if (/\[olay\] Dugum \d+ acildi/.test(s)) {
+      if (this.loop === "calisiyor")
+        this.setBlock("Sürücüler yeniden başladı (besleme kesildi) — ayarları silindi. ▶ Başlat'a basın (yeniden kurar), sonra Enable'ı kapatıp açın.");
+      say("Sürücüler yeniden başladı. Başlat'a basın.", "boot", 10); return;
+    }
     const me = EMCY.exec(s);
     if (me) { if (!s.includes("temizlendi")) say("Eklem " + me[1] + " hata verdi", null, 5); return; }
     if (s.startsWith("[JOYSTICK]") && s.includes("sicradi")) {
@@ -505,11 +525,13 @@ class UsbMon {
    * eksenler yapilandirilmamis kalir, Enable hicbir seyi enerjilendirmez. */
   startCmds() {
     const st = [1, 2, 3, 4, 5, 6, 7].map(n => (this.latest[n] || ["?"])[0]);
-    const unconf = st.some(s => s === "?" || /yapilandirilmadi/.test(s));
+    /* ARIZA da yeniden kurulur: besleme dusup surucu yeniden acilinca ayarlari
+     * (mod, PDO) silinir, yalniz 'reset' yetmez */
+    const bad = st.some(s => s === "?" || /yapilandirilmadi|ARIZA/.test(s));
     const live = st.some(s => /CALISIYOR|PARK|enerjileniyor|kapatiliyor/.test(s));
     if (this.loop !== "calisiyor") return { cmds: ["config 0", "loop on", "panel on"] };
-    if (!unconf) return { cmds: ["panel on"] };
-    if (live) return { err: "Bazı eksenler yapılandırılmamış, diğerleri enerjili — önce Fren (eksenleri kapat), sonra ▶ Başlat." };
+    if (!bad) return { cmds: ["panel on"] };
+    if (live) return { err: "Bazı eksenler arızada ya da yapılandırılmamış, diğerleri enerjili — önce Fren (eksenleri kapat), sonra ▶ Başlat." };
     return { cmds: ["loop off", "config 0", "loop on", "panel on"] };   /* hepsi enerjisiz: guvenli */
   }
 
