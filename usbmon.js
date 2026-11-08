@@ -31,7 +31,7 @@ const JOY_SAY = { LX: "sol çubuk sağ sol", LY: "sol çubuk ileri geri", LZ: "s
 const PERIOD = 250, POSE_PERIOD = 500, VOLT_PERIOD = 500;      /* ms */
 const PERIODIC = [[1, 0x6079, 0], [7, 0x6079, 0], [2, 0x2014, 2]];
 const T_WARN = 800, T_OVER = 1000, SUSTAIN = 1000, V_WARN = 20000;
-const SURUM = "08.11.2026 15:54";                                           /* yayinla.sh damgalar */
+const SURUM = "08.11.2026 16:30";                                           /* yayinla.sh damgalar */
 const ST_VID = 0x0483;                                          /* STMicroelectronics (ST-LINK) */
 const ACTIONS = {
   panel_kapat: ["panel off"],
@@ -355,13 +355,20 @@ class UsbMon {
   async readPose() {
     const r = await this.cmd("pose", 1000);
     for (const l of this.respLines(r, "pose")) {
-      if (l.includes("Bilinmeyen komut")) {
-        this.poseOk = false;
-        this.event("[izleyici] firmware 'pose' bilmiyor - TCP okunmuyor (eski surum)");
+      /* Konsol bazen karakter kaciriyor ("poseread"): yalniz tam 'pose'
+       * bilinmiyorsa ve 3 kez ust uste olursa birak. */
+      if (/Bilinmeyen komut: pose\s+\(/.test(l)) {
+        this.poseUnknown = (this.poseUnknown || 0) + 1;
+        if (this.poseUnknown >= 3) {
+          this.poseOk = false;
+          this.event("[izleyici] firmware 'pose' bilmiyor - TCP okunmuyor (eski surum)");
+        }
         return;
       }
+      if (l.includes("Bilinmeyen komut")) return;           /* bozuk okunmus komut */
       if (l.startsWith("[")) { this.handleLine(l); continue; }
       const m = POSE.exec(l);
+      if (m) this.poseUnknown = 0;
       if (!m) continue;
       try {
         const [q, tcp, rpy, w, valid] = m[1].split("|").map(p => p.trim().split(/\s+/));

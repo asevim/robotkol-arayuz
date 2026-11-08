@@ -37,6 +37,8 @@
   .jtype { color: var(--dim); font-size: 11px; }
   .chip { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: #2a313b; white-space: nowrap; }
   .meta { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .meta .ang { color: var(--text); font-weight: 600; }
+  .meta .enc { font-size: 11px; opacity: .75; }
   .bar { position: relative; height: 10px; background: #0c0f13; border-radius: 5px; overflow: hidden; }
   .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; }
   .bar .m { position: absolute; top: 0; bottom: 0; width: 1px; background: #ffffff55; }
@@ -360,13 +362,13 @@ const rows = {};
 for (let n = 1; n <= 7; n++) {
   const d = document.createElement("div"); d.className = "j";
   d.innerHTML = `<div><div class="jid">J${n}</div><div class="jtype">${TYPES[n-1]}</div></div>
-    <div><span class="chip">-</span> <span class="meta">${NAMES[n-1]} · <span class="ang">-</span>° · <span class="vel">-</span>°/s</span></div>
+    <div><span class="chip">-</span> <span class="meta">${NAMES[n-1]} · <span class="ang">-</span>°<span class="enc"></span> · <span class="vel">-</span>°/s</span></div>
     <div class="tq">-</div>
     <div></div><div class="bar"><i></i><div class="m" style="left:40%"></div><div class="m" style="left:50%"></div></div>
     <div class="pk">tepe -</div>
     <div></div><canvas class="spark"></canvas><div></div>`;
   jointsEl.appendChild(d);
-  rows[n] = { chip: d.querySelector(".chip"), ang: d.querySelector(".ang"), vel: d.querySelector(".vel"),
+  rows[n] = { chip: d.querySelector(".chip"), ang: d.querySelector(".ang"), enc: d.querySelector(".enc"), vel: d.querySelector(".vel"),
     tq: d.querySelector(".tq"), bar: d.querySelector(".bar i"), pk: d.querySelector(".pk"),
     spark: d.querySelector(".spark"), hist: [] };
 }
@@ -565,11 +567,17 @@ async function poll() {
     fwFresh() ? "açılar: firmware" : "açılar: tarayıcı kalibrasyonu";
   document.getElementById("loop").textContent = d.loop;
   document.getElementById("samp").textContent = d.samples;
+  for (const j of d.joints) if (j.id <= 6) liveAng[j.id - 1] = j.pos;
   for (const j of d.joints) {
     const r = rows[j.id]; if (!r) continue;
     const k = tqClass(j.state, j.tq);
     r.chip.textContent = j.state; r.chip.style.background = cssVar[k]; r.chip.style.color = "#0b0d10";
-    r.ang.textContent = j.pos.toFixed(1); r.vel.textContent = j.vel.toFixed(1);
+    /* Buyuk sayi: kolun sifirina (dik poz) gore aci - sifir pozunda 0.
+     * Yaninda kucuk: surucunun encoder acisi (sinirlar +-360 buna gore). */
+    const m = (j.id <= 6 && !previewMode) ? modelAngle(j.id - 1) : j.pos;
+    r.ang.textContent = (Math.abs(m) < 0.05 ? 0 : m).toFixed(1);        /* "-0.0" yazmasin */
+    r.enc.textContent = (Math.abs(m - j.pos) > 0.05) ? " (enc " + j.pos.toFixed(1) + "°)" : "";
+    r.vel.textContent = j.vel.toFixed(1);
     r.tq.textContent = j.tq; r.tq.style.color = cssVar[k];
     r.bar.style.width = Math.min(100, Math.abs(j.tq) / 20) + "%"; r.bar.style.background = cssVar[k];
     r.pk.textContent = "tepe " + j.peak;
@@ -588,7 +596,7 @@ detectMode().then(poll);
 setInterval(poll, 200);
 
 /* Surum etiketi: tabletin hangi surumu calistirdigi gorunsun (yayinla.sh damgalar) */
-const SURUM = "08.11.2026 15:54";
+const SURUM = "08.11.2026 16:30";
 function showVersion() {
   const el = document.getElementById("surum");
   let t = "sürüm " + SURUM;
