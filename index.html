@@ -118,6 +118,7 @@
         <button id="b-panel" title="panel off: joystick komutları durur, enerji kesilmez">Paneli kapat</button>
         <button id="b-brake" title="Tüm eksenler kapanır, frenler tutar">Fren (eksenleri kapat)</button>
         <button id="b-reset" title="Arızaları temizler; enerji vermez">Arıza reset</button>
+        <button id="b-ready" title="Kolun şu anki pozu kartezyen hazır poz olur (önce EKLEM modunda ayarlayın). KARTEZYEN modda Reset'i 1 s'den uzun basılı tutunca kol buraya gider.">Hazır poz kaydet</button>
       </div>
       <div id="ctlmsg">Hiçbir tuş motorlara enerji vermez — eksenler paneldeki Enable anahtarıyla enerjilenir.</div>
       <div id="blockmsg" role="alert"></div>
@@ -475,7 +476,7 @@ document.addEventListener("visibilitychange", () => {
 
 /* ======================= KONTROL ======================= */
 const ctlMsg = document.getElementById("ctlmsg");
-const ctlBtns = ["b-start", "b-panel", "b-brake", "b-reset"].map(id => document.getElementById(id));
+const ctlBtns = ["b-start", "b-panel", "b-brake", "b-reset", "b-ready"].map(id => document.getElementById(id));
 async function ctl(action) {
   if (MODE === "usb") {
     const j = usb.action(action);
@@ -500,6 +501,10 @@ document.getElementById("b-start").onclick = () => ctl("baslat");
 document.getElementById("b-panel").onclick = () => ctl("panel_kapat");
 document.getElementById("b-brake").onclick = () => ctl("fren");
 document.getElementById("b-reset").onclick = () => ctl("reset");
+document.getElementById("b-ready").onclick = () => {
+  if (confirm("Kolun şu anki pozu kartezyen HAZIR POZ olarak kaydedilsin mi?\n\n" +
+              "KARTEZYEN modda Reset'i 1 s'den uzun basılı tutunca kol buraya gider.")) ctl("hazir_kaydet");
+};
 function chip(id, text, cls) { const e = document.getElementById(id); e.textContent = text; e.className = cls || ""; }
 function showCtl(d) {
   const alive = d.mon_alive, fresh = d.age !== null && d.age !== undefined && d.age < 3;
@@ -596,7 +601,7 @@ detectMode().then(poll);
 setInterval(poll, 200);
 
 /* Surum etiketi: tabletin hangi surumu calistirdigi gorunsun (yayinla.sh damgalar) */
-const SURUM = "08.11.2026 16:39";
+const SURUM = "08.11.2026 16:49";
 function showVersion() {
   const el = document.getElementById("surum");
   let t = "sürüm " + SURUM;
