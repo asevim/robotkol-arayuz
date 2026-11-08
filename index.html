@@ -100,8 +100,8 @@
     <div id="axleg">
       <b>Taban (masaya sabit):</b> <span class="x">X ileri</span> · <span class="y">Y konnektörün tersi</span> · <span class="z">Z yukarı</span><br>
       <b>Gripper (uçta, onunla döner):</b> <span class="x">x</span> · <span class="y">y parmak açılma yönü</span> · <span class="z">z gripper ekseni</span><br>
-      <b>Kartezyen:</b> sol çubuk ileri-geri <span class="x">X</span>, sağ-sol <span class="y">Y</span>, burgu <span class="z">Z</span> ·
-      sağ çubuk gripper'ı <span class="x">x</span> / <span class="y">y</span> etrafında eğer, burgu <span class="z">z</span> etrafında döndürür
+      <b>Kartezyen:</b> sol çubuk ileri-geri <span class="x">X</span>, sağ-sol <span class="y">Y</span>, burgu <span class="y">y</span> etrafında yatırır ·
+      sağ çubuk ileri-geri <span class="z">Z</span> (ileri = yukarı), sağ-sol <span class="x">x</span> etrafında yatırır, burgu <span class="z">z</span> etrafında çevirir
     </div>
   </div>
   <div id="side">
@@ -596,7 +596,7 @@ detectMode().then(poll);
 setInterval(poll, 200);
 
 /* Surum etiketi: tabletin hangi surumu calistirdigi gorunsun (yayinla.sh damgalar) */
-const SURUM = "08.11.2026 16:30";
+const SURUM = "08.11.2026 16:39";
 function showVersion() {
   const el = document.getElementById("surum");
   let t = "sürüm " + SURUM;

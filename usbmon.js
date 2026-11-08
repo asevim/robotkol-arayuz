@@ -31,7 +31,7 @@ const JOY_SAY = { LX: "sol çubuk sağ sol", LY: "sol çubuk ileri geri", LZ: "s
 const PERIOD = 250, POSE_PERIOD = 500, VOLT_PERIOD = 500;      /* ms */
 const PERIODIC = [[1, 0x6079, 0], [7, 0x6079, 0], [2, 0x2014, 2]];
 const T_WARN = 800, T_OVER = 1000, SUSTAIN = 1000, V_WARN = 20000;
-const SURUM = "08.11.2026 16:30";                                           /* yayinla.sh damgalar */
+const SURUM = "08.11.2026 16:39";                                           /* yayinla.sh damgalar */
 const ST_VID = 0x0483;                                          /* STMicroelectronics (ST-LINK) */
 const ACTIONS = {
   panel_kapat: ["panel off"],
