@@ -31,13 +31,15 @@ const JOY_SAY = { LX: "sol çubuk sağ sol", LY: "sol çubuk ileri geri", LZ: "s
 const PERIOD = 250, POSE_PERIOD = 500, VOLT_PERIOD = 500;      /* ms */
 const PERIODIC = [[1, 0x6079, 0], [7, 0x6079, 0], [2, 0x2014, 2]];
 const T_WARN = 800, T_OVER = 1000, SUSTAIN = 1000, V_WARN = 20000;
-const SURUM = "14.11.2026 12:15";                                           /* yayinla.sh damgalar */
+const SURUM = "14.11.2026 14:49";                                           /* yayinla.sh damgalar */
 const ST_VID = 0x0483;                                          /* STMicroelectronics (ST-LINK) */
 const ACTIONS = {
   panel_kapat: ["panel off"],
   fren:  [1, 2, 3, 4, 5, 6, 7].map(n => "disable " + n),
   reset: [1, 2, 3, 4, 5, 6, 7].map(n => "reset " + n),
   hazir_kaydet: ["hazir kaydet"],
+  demo_basla: ["demo basla"],
+  demo_dur: ["demo dur"],
 };
 const BRAKE_STR = { 0: "KAPALI (fren tutuyor)", 1: "20V acma", 2: "7V tutma (acik)" };
 
@@ -406,6 +408,8 @@ class UsbMon {
     else if (s.startsWith("[PANEL] KARTEZYEN mod")) p.mode = "KARTEZYEN";
     else if (s.startsWith("[PANEL] EKLEM modu")) p.mode = "EKLEM";
     if (s.startsWith("[PANEL] Enable: eksenler enerjileniyor")) { p.enable = "acik"; this.enableBlock = null; }
+    if (s.startsWith("[DEMO] Basladi")) p.demo = true;
+    else if (s.startsWith("[DEMO] Durdu")) p.demo = false;
     else if (s.startsWith("[PANEL] Enable kapandi")) p.enable = "kapali";
     else if (s.includes("ENABLE REDDEDILDI")) p.enable = "reddedildi";
     else if (s.includes("enable anahtari su an ACIK")) p.enable = "anahtar acik - kapatip acin";
@@ -483,6 +487,8 @@ class UsbMon {
     const table = s.startsWith("[SIFIR]") ? [
         ["gidiliyor", "Sıfır konumuna gidiliyor"], ["konumunda", "Sıfır konumunda, Reset'i bırakın"],
         ["Kalibrasyon", "Kalibrasyon geçerli değil"]]
+      : s.startsWith("[DEMO]") ? [
+        ["Basladi", "Demo başladı"], ["Durdu", "Demo durdu"]]
       : s.startsWith("[HAZIR]") ? [
         ["gidiliyor", "Hazır poza gidiliyor"], ["hazir pozda", "Hazır pozda, Reset'i bırakın"],
         ["kaydedilmemis", "Hazır poz kaydedilmemiş"], ["Kalibrasyon", "Kalibrasyon geçerli değil"]]
@@ -574,6 +580,9 @@ class UsbMon {
       const r = this.startCmds();
       if (r.err) return { ok: false, msg: r.err };
       cmds = r.cmds;
+    } else if (a === "demo_dur") {                       /* durdurma beklemesin: kuyrugun basina */
+      this.pending.unshift("demo dur");
+      return { ok: true, msg: "demo dur gönderildi." };
     } else if (ACTIONS[a]) {
       cmds = ACTIONS[a];
     } else {

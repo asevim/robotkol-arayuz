@@ -124,7 +124,7 @@
     <div class="ctl">
       <div class="st">
         <span id="s-mon">izleyici -</span><span id="s-loop">döngü -</span><span id="s-panel">panel -</span>
-        <span id="s-drv">sürücüler -</span><span id="s-mode">mod -</span><span id="s-en">enable -</span>
+        <span id="s-drv">sürücüler -</span><span id="s-mode">mod -</span><span id="s-en">enable -</span><span id="s-demo" hidden>demo</span>
       </div>
       <div class="bt">
         <button id="b-usb" class="go" hidden title="Kartın USB'sine (ST-LINK) doğrudan bağlan">USB'ye bağlan</button>
@@ -132,6 +132,8 @@
         <button id="b-panel" title="panel off: joystick komutları durur, enerji kesilmez">Paneli kapat</button>
         <button id="b-brake" title="Tüm eksenler kapanır, frenler tutar">Fren (eksenleri kapat)</button>
         <button id="b-reset" title="Arızaları temizler; enerji vermez">Arıza reset</button>
+        <button id="b-demo" class="go" title="Fuar demosu: dik pozun çevresinde sabit hareketler, döngüde (~72 s). Panel açık, Enable açık, mod EKLEM olmalı.">▶ Demo</button>
+        <button id="b-demo-stop" title="Demoyu durdurur. Joystick, Reset, Enable kapatma ve E-Stop da durdurur.">■ Demo durdur</button>
         <button id="b-ready" title="Kolun şu anki pozu kartezyen hazır poz olur (önce EKLEM modunda ayarlayın). KARTEZYEN modda Reset'i 1 s'den uzun basılı tutunca kol buraya gider.">Hazır poz kaydet</button>
       </div>
       <div id="ctlmsg">Hiçbir tuş motorlara enerji vermez — eksenler paneldeki Enable anahtarıyla enerjilenir.</div>
@@ -521,6 +523,12 @@ document.getElementById("b-start").onclick = () => ctl("baslat");
 document.getElementById("b-panel").onclick = () => ctl("panel_kapat");
 document.getElementById("b-brake").onclick = () => ctl("fren");
 document.getElementById("b-reset").onclick = () => ctl("reset");
+document.getElementById("b-demo").onclick = () => {
+  if (confirm("Demo başlasın mı?\n\nKol önce dik poza gider, sonra ~72 saniyelik hareket dizisini döngüde tekrarlar " +
+              "(taban ±50° döner, kol öne eğilir). Kolun çevresinde en az 50 cm boşluk olsun.\n\n" +
+              "Durdurmak için: ■ Demo durdur, herhangi bir joystick, Reset, Enable kapatma ya da E-Stop.")) ctl("demo_basla");
+};
+document.getElementById("b-demo-stop").onclick = () => ctl("demo_dur");
 document.getElementById("b-ready").onclick = () => {
   if (confirm("Kolun şu anki pozu kartezyen HAZIR POZ olarak kaydedilsin mi?\n\n" +
               "KARTEZYEN modda Reset'i 1 s'den uzun basılı tutunca kol buraya gider.")) ctl("hazir_kaydet");
@@ -613,6 +621,9 @@ function showCtl(d) {
        js.length ? (nf ? "bad" : nc === 7 ? "ok" : "warn") : "");
   chip("s-mode", "mod " + (p.mode ? p.mode.toLowerCase() : "-"), p.mode === "KARTEZYEN" ? "warn" : "");
   chip("s-en", "enable " + (p.enable || "-"), p.enable === "acik" ? "ok" : p.enable === "reddedildi" ? "bad" : "");
+  const dm = document.getElementById("s-demo");
+  dm.hidden = !(live && p.demo);
+  if (live && p.demo) chip("s-demo", "DEMO çalışıyor", "ok");
 }
 
 /* ======================= VERI ======================= */
@@ -689,7 +700,7 @@ detectMode().then(poll);
 setInterval(poll, 200);
 
 /* Surum etiketi: tabletin hangi surumu calistirdigi gorunsun (yayinla.sh damgalar) */
-const SURUM = "14.11.2026 12:15";
+const SURUM = "14.11.2026 14:49";
 function showVersion() {
   const el = document.getElementById("surum");
   let t = "sürüm " + SURUM;
