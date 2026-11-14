@@ -17,6 +17,8 @@ class FakePort {
     this.joy = { LX: [32833, 0, false], LY: [33143, 0, false], LZ: [30374, 0, false],
                  RX: [32870, 0, false], RY: [32870, 0, false], RZ: [31780, 0, false] };
     this.liveTimer = null;
+    this.ej = {};               /* ekrandan oynatma: eklem -> {v, t} */
+    this.lastTick = Date.now();
   }
   joyLines() {
     return Object.entries(this.joy).map(([k, [raw, n, f]]) => {
@@ -60,15 +62,27 @@ class FakePort {
     if (!this.en) return "hazir (enerjisiz)";
     return (n === 7) ? "PARK (fren)" : "CALISIYOR";
   }
-  tick() {   /* enerjili iken eklemler yavasca salinir */
-    const t = (Date.now() - this.t0) / 1000;
-    if (this.en && this.loop) for (let i = 0; i < 6; i++) this.pos[i] += 0.4 * Math.sin(t * 0.5 + i);
+  tick() {   /* ekran komutu varsa o eklem 10 d/s ile doner (500 ms yenilenmezse durur) */
+    const now = Date.now(), dt = (now - this.lastTick) / 1000; this.lastTick = now;
+    for (const [n, j] of Object.entries(this.ej)) {
+      if (now - j.t > 500) { delete this.ej[n]; continue; }
+      const dir = DIR[n - 1] || 1;
+      if (this.en && this.loop) this.pos[n - 1] += dir * 10 * j.v / 1000 * dt;
+    }
   }
   exec(l) {
     const out = s => this.emit("  " + s + "\r\n");
     const a = l.split(/\s+/);
     this.tick();
     if (l === "") return;
+    if (a[0] === "ej") {
+      if (a.length === 1) { this.ej = {}; return; }
+      const n = +a[1], v = +a[2];
+      if (!this.panel) { out("EKRAN: panel kapali - once Baslat"); return; }
+      if (!this.en) { out("EKRAN: paneldeki Enable kapali"); return; }
+      if (v === 0) delete this.ej[n]; else this.ej[n] = { v, t: Date.now() };
+      return;
+    }
     if (a[0] === "joy") {
       out("Canli joystick - cikmak icin bir tus. Norm: -1000..+1000 (ol bolge 100)");
       out("  Eksen  Ham    Gerilim   Norm");

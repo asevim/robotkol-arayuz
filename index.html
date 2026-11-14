@@ -68,6 +68,18 @@
   .ctl button.go { background: #1d4d33; border-color: #2fbf71; font-weight: 700; }
   .ctl button.go:hover { background: #24603f; }
   .ctl button:disabled { opacity: .5; cursor: default; }
+  .jogbox { margin: 0 0 12px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #11161c; }
+  .jogbox .jh { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; font-size: 13px; }
+  .jogbox .jh .dim { color: var(--dim); font-size: 11px; }
+  .jogbox .spd { margin-left: auto; display: flex; gap: 4px; }
+  .jogbox .spd button.on { background: #1d4d33; border-color: #2fbf71; }
+  .jogbox .jgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
+  .jogbox .jr { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 6px; }
+  .jogbox .jr span { font-size: 12px; text-align: center; color: var(--text); }
+  .jogbox button.j { font-size: 18px; font-weight: 700; padding: 4px 0; touch-action: none;
+                     user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .jogbox button.j.on { background: #1d4d33; border-color: #2fbf71; }
+  #jogmsg { font-size: 11px; color: var(--dim); margin-top: 6px; min-height: 15px; }
   #ctlmsg { color: var(--dim); font-size: 11px; margin-top: 6px; min-height: 15px; }
   #surum { color: var(--dim); font-size: 10px; margin-top: 4px; opacity: .7; }
   #blockmsg { display: none; margin-top: 8px; padding: 8px 10px; border-radius: 6px; font-size: 13px; line-height: 1.4;
@@ -81,6 +93,8 @@
     button { padding: 12px 16px; font-size: 15px; border-radius: 8px; }
     .ctl .bt { gap: 8px; }
     .ctl .st span { font-size: 13px; padding: 4px 10px; }
+    .jogbox .jr { grid-template-columns: 60px 1fr 60px; }
+    .jogbox button.j { font-size: 22px; padding: 10px 0; }
     .cal input[type=range] { height: 28px; }
     #axleg { font-size: 12px; }
   }
@@ -123,6 +137,12 @@
       <div id="ctlmsg">Hiçbir tuş motorlara enerji vermez — eksenler paneldeki Enable anahtarıyla enerjilenir.</div>
       <div id="blockmsg" role="alert"></div>
       <div id="surum"></div>
+    </div>
+    <div class="jogbox">
+      <div class="jh"><b>Ekrandan oynat</b><span class="dim">basılı tutun, bırakınca durur · paneldeki Enable açık, mod EKLEM</span>
+        <span class="spd"><button id="jog-coarse" class="on" title="Eklemin tam hızı (J2 5 °/s, diğerleri 10 °/s)">Kaba</button><button id="jog-fine" title="Tam hızın %25'i">İnce</button></span></div>
+      <div class="jgrid" id="jogrows"></div>
+      <div id="jogmsg"></div>
     </div>
     <div class="legend">
       <span style="--c:var(--ok)">rahat</span><span style="--c:var(--warn)">≥800</span>
@@ -505,6 +525,73 @@ document.getElementById("b-ready").onclick = () => {
   if (confirm("Kolun şu anki pozu kartezyen HAZIR POZ olarak kaydedilsin mi?\n\n" +
               "KARTEZYEN modda Reset'i 1 s'den uzun basılı tutunca kol buraya gider.")) ctl("hazir_kaydet");
 };
+/* ======================= EKRANDAN OYNATMA =======================
+ * Basili tutuldukca 'ej <eklem> <binde>' her JOG_MS'de bir yenilenir;
+ * firmware EJ_HOLD_MS (500 ms) icinde yenilenmeyen komutu sifirlar (tablet
+ * donsa / baglanti kopsa kol durur). Birakinca hemen 0 gonderilir. */
+const JOG_MS = 150;
+let jogFine = false, jog = null;
+const jogMsgEl = document.getElementById("jogmsg");
+function jogSend(node, v) {
+  if (MODE === "usb") { if (usb) usb.jog(node, v); return; }
+  fetch("api/cmd", { method: "POST", headers: { "Content-Type": "application/json", "X-Arayuz": "1" },
+                     body: JSON.stringify({ action: "jog", node, v }) }).catch(() => {});
+}
+function jogStop() {
+  if (!jog) return;
+  clearInterval(jog.timer);
+  jog.btn.classList.remove("on");
+  jogSend(jog.node, 0);
+  jog = null;
+}
+function jogStart(btn, node, sign) {
+  jogStop();
+  const v = sign * (jogFine ? 250 : 1000);
+  jog = { node, v, btn, t0: Date.now(), timer: setInterval(() => jogSend(node, v), JOG_MS) };
+  btn.classList.add("on");
+  jogSend(node, v);
+}
+(function buildJog() {
+  const rows = document.getElementById("jogrows");
+  const names = ["taban", "omuz", "dirsek", "ön kol", "bilek", "bilek döner", "gripper"];
+  for (let n = 1; n <= 7; n++) {
+    const r = document.createElement("div"); r.className = "jr";
+    const lo = n === 7 ? "Kapa" : "−", hi = n === 7 ? "Aç" : "+";
+    r.innerHTML = `<button class="j" data-s="-1">${lo}</button><span>J${n} ${names[n - 1]}</span><button class="j" data-s="1">${hi}</button>`;
+    r.querySelectorAll("button").forEach(b => {
+      const s = +b.dataset.s;
+      b.title = n === 7 ? (s > 0 ? "Gripper'ı aç" : "Gripper'ı kapa")
+                        : `J${n} açısını ${s > 0 ? "artır" : "azalt"} (arayüzdeki büyük sayı)`;
+      b.addEventListener("pointerdown", e => {
+        e.preventDefault();
+        try { b.setPointerCapture(e.pointerId); } catch (_) {}
+        jogStart(b, n, s);
+      });
+      ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => b.addEventListener(ev, jogStop));
+      b.addEventListener("contextmenu", e => e.preventDefault());
+    });
+    rows.appendChild(r);
+  }
+  const bc = document.getElementById("jog-coarse"), bf = document.getElementById("jog-fine");
+  bc.onclick = () => { jogFine = false; bc.classList.add("on"); bf.classList.remove("on"); };
+  bf.onclick = () => { jogFine = true; bf.classList.add("on"); bc.classList.remove("on"); };
+  window.addEventListener("blur", jogStop);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) jogStop(); });
+})();
+function jogStatus(d) {
+  let why = "";
+  if (!d || d.error) why = MODE === "usb" ? "USB bağlı değil" : "izleyici ya da kart yok";
+  else if (d.panel && d.panel.on === false) why = "Panel kapalı — önce ▶ Başlat";
+  else if (d.panel && d.panel.mode === "KARTEZYEN") why = "Mod anahtarı KARTEZYEN'de — ekrandan yalnız EKLEM modunda oynatılır";
+  else if (d.panel && d.panel.enable && d.panel.enable !== "acik") why = "Paneldeki Enable kapalı — anahtarı açın";
+  const jm = d && d.jog_msg;
+  const jmFresh = jm && (Date.now() / 1000 - (jm.t > 1e11 ? jm.t / 1000 : jm.t)) < 3;
+  if (jmFresh && jog && jm.t * (jm.t > 1e11 ? 1 : 1000) >= jog.t0) jogStop();    /* kart reddetti: tutmayi birak */
+  const t = jmFresh ? "Kart reddetti: " + jm.text : (why || "Hazır. + açıyı artırır, − azaltır (listede büyük yazan açı).");
+  if (jogMsgEl.textContent !== t) jogMsgEl.textContent = t;
+  jogMsgEl.style.color = (jmFresh || why) ? "var(--warn)" : "var(--dim)";
+}
+
 function chip(id, text, cls) { const e = document.getElementById(id); e.textContent = text; e.className = cls || ""; }
 function showCtl(d) {
   const alive = d.mon_alive, fresh = d.age !== null && d.age !== undefined && d.age < 3;
@@ -558,6 +645,7 @@ async function poll() {
     ctlMsg.style.color = "var(--dim)";
   }
   showBlock(d.enable_block);
+  jogStatus(d);
   if (d.error || d.age === null || d.age > 2.5) {
     connEl.textContent = d.error ? (MODE === "usb" ? "USB bağlı değil" : "izleyici kapalı")
                        : (d.age === null ? "veri bekleniyor" : `veri gelmiyor (${d.age.toFixed(0)} s)`);
@@ -601,7 +689,7 @@ detectMode().then(poll);
 setInterval(poll, 200);
 
 /* Surum etiketi: tabletin hangi surumu calistirdigi gorunsun (yayinla.sh damgalar) */
-const SURUM = "08.11.2026 16:49";
+const SURUM = "14.11.2026 12:15";
 function showVersion() {
   const el = document.getElementById("surum");
   let t = "sürüm " + SURUM;

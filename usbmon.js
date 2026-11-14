@@ -31,7 +31,7 @@ const JOY_SAY = { LX: "sol çubuk sağ sol", LY: "sol çubuk ileri geri", LZ: "s
 const PERIOD = 250, POSE_PERIOD = 500, VOLT_PERIOD = 500;      /* ms */
 const PERIODIC = [[1, 0x6079, 0], [7, 0x6079, 0], [2, 0x2014, 2]];
 const T_WARN = 800, T_OVER = 1000, SUSTAIN = 1000, V_WARN = 20000;
-const SURUM = "08.11.2026 16:49";                                           /* yayinla.sh damgalar */
+const SURUM = "14.11.2026 12:15";                                           /* yayinla.sh damgalar */
 const ST_VID = 0x0483;                                          /* STMicroelectronics (ST-LINK) */
 const ACTIONS = {
   panel_kapat: ["panel off"],
@@ -87,6 +87,8 @@ class UsbMon {
     this.panel = { on: null, mode: null, enable: null };
     this.recent = [];
     this.joyCheck = false;      /* Enable joystik yuzunden reddedildi: 'joy' ile hangisi oku */
+    this.jogUntil = 0;          /* ekrandan oynatma suruyor: yavas okumalar ertelenir */
+    this.jogMsg = null;         /* {t, text}: kartin 'ej' reddi */
     this.enableBlock = null;    /* {t, text}: arayuzde gosterilen red sebebi */
   }
 
@@ -214,9 +216,10 @@ class UsbMon {
     }
   }
 
-  /* Komut gonder, istem ("> ") gelip 50 ms sessiz kalana kadar yaniti topla */
-  async cmd(s, timeout) {
+  /* Komut gonder, istem ("> ") gelip 'quiet' ms sessiz kalana kadar yaniti topla */
+  async cmd(s, timeout, quiet) {
     timeout = timeout || 3000;
+    quiet = (quiet === undefined) ? 50 : quiet;
     if (this.lineBuf) { this.handleLine(this.lineBuf); this.lineBuf = ""; }
     this.resp = ""; this.collecting = true;
     try {
@@ -227,7 +230,7 @@ class UsbMon {
         await sleep(10);
         if (this.resp.endsWith("> ")) {
           if (this.resp.length !== lastLen) { lastLen = this.resp.length; quietFrom = Date.now(); }
-          else if (Date.now() - quietFrom >= 50) break;
+          else if (Date.now() - quietFrom >= quiet) break;
         } else { lastLen = -1; }
       }
     } finally { this.collecting = false; }
@@ -250,6 +253,12 @@ class UsbMon {
         const now = Date.now();
         if (this.pending.length) {
           const c = this.pending.shift();
+          if (c.startsWith("ej")) {                       /* ekrandan oynatma: sessiz ve hizli */
+            const r = await this.cmd(c, 600, 5);
+            const m = /EKRAN:\s*(.*)/.exec(r.replace(ANSI, ""));
+            if (m) this.jogMsg = { t: Date.now(), text: m[1].trim() };
+            continue;
+          }
           this.event("[izleyici] komut gonderiliyor: " + c);
           const r = await this.cmd(c, c.startsWith("config") ? 25000 : 3000);
           for (const l of this.respLines(r, c)) { this.track(l); this.event("    " + l); }
@@ -257,7 +266,8 @@ class UsbMon {
           continue;
         }
         if (this.joyCheck) { this.joyCheck = false; await this.checkJoy(); continue; }
-        if (now >= nextVolt) { await this.readVolt(); nextVolt = Date.now() + VOLT_PERIOD; continue; }
+        const jogging = now < this.jogUntil;              /* oynatirken seri hat 'ej'e kalsin */
+        if (!jogging && now >= nextVolt) { await this.readVolt(); nextVolt = Date.now() + VOLT_PERIOD; continue; }
         if (this.poseOk && now >= nextPose) { await this.readPose(); nextPose = Date.now() + POSE_PERIOD; continue; }
         if (now >= nextPoll) {
           const r = await this.cmd("ax", 1500);
@@ -526,7 +536,7 @@ class UsbMon {
     return { t, age: this.t ? (Date.now() - this.t) / 1000 : null, samples: this.samples, loop: this.loop,
              joints, volt: this.volt, volt_min: this.voltMin, kin: this.kin,
              connected: this.connected, panel: this.panel, events: this.recent.slice(),
-             enable_block: this.enableBlock,
+             enable_block: this.enableBlock, jog_msg: this.jogMsg,
              usb_err: this.lastErr, retry_err: this.retryErr, drops: this.drops, retrying: !!this.retry,
              mon_alive: true, error: this.connected ? undefined : "USB bağlı değil" };
   }
@@ -544,6 +554,16 @@ class UsbMon {
     if (!bad) return { cmds: ["panel on"] };
     if (live) return { err: "Bazı eksenler arızada ya da yapılandırılmamış, diğerleri enerjili — önce Fren (eksenleri kapat), sonra ▶ Başlat." };
     return { cmds: ["loop off", "config 0", "loop on", "panel on"] };   /* hepsi enerjisiz: guvenli */
+  }
+
+  /* Ekrandan oynatma: 'ej <eklem> <binde>' (0 = dur). Ayni eklemin bekleyen
+   * eski komutu atilir, yenisi kuyrugun basina gecer (bekleme olmasin). */
+  jog(node, v) {
+    if (!this.connected) return false;
+    this.pending = this.pending.filter(x => !x.startsWith("ej " + node + " "));
+    this.pending.unshift("ej " + node + " " + v);
+    if (v !== 0) this.jogUntil = Date.now() + 600;
+    return true;
   }
 
   /* Kontrol tusu -> {ok, msg}. server.py do_action ile ayni kurallar. */
